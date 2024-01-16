@@ -5,8 +5,8 @@ sermon-processor project on macOS.
 
 ## Prerequisites
 
-Before you start, make sure you have Python 3 installed on your system. You can
-check your Python version by running:
+Before you start, make sure you have Python 3 and the Audacity app installed on
+your system. You can check your Python version by running:
 
 ```bash
 python3 --version
@@ -49,15 +49,7 @@ With the virtual environment activated, install the required packages using
 `pip`:
 
 ```bash
-pip install pytube moviepy
-```
-
-```bash
-pip install yt-dlp
-```
-
-```bash
-pip install pydub
+pip install moviepy yt-dlp
 ```
 
 These packages will only be available within this virtual environment and are
@@ -72,6 +64,9 @@ python process.py
 ```
 
 Follow the prompts to input the YouTube URL and timestamps for audio processing.
+Once the automated processing in complete, follow the steps of the resulting
+helper text file to make final scrub edits in Audacity, export the file as a
+.mp3, and hand it off to be uploaded and distributed.
 
 ## Deactivating the Virtual Environment
 
