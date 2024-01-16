@@ -5,41 +5,44 @@ from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
 
 
 def get_formatted_time(time_input):
-    """Formats the time input to HH:MM:SS format or defaults to zero."""
     return time_input if time_input else "00:00:00"
 
 
 def create_and_change_directory():
-    """Creates a new directory based on the current date and changes the working directory to it."""
     date_directory = datetime.now().strftime("%Y-%m-%d")
     os.makedirs(date_directory, exist_ok=True)
     os.chdir(date_directory)
 
 
 def download_audio_from_youtube(youtube_url, start_time, end_time):
-    """Downloads audio from a YouTube URL with optional start and end timestamps."""
     download_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     audio_filename = f"downloaded_audio_{download_time}.mp3"
 
-    postprocessor_args = f"-ss {start_time} -to {end_time}" if start_time or end_time else ""
-    subprocess.run([
+    postprocessor_args = []
+    if start_time != "00:00:00":
+        postprocessor_args.extend(["-ss", start_time])
+    if end_time != "00:00:00":
+        postprocessor_args.extend(["-to", end_time])
+
+    command = [
         "yt-dlp", "--progress", "-x", "--audio-format", "mp3",
-        "-o", f"downloaded_audio_{download_time}.%(ext)s",
-        "--postprocessor-args", postprocessor_args,
-        youtube_url
-    ], check=True)
+        "-o", audio_filename, youtube_url
+    ]
+
+    if postprocessor_args:
+        command.extend(["--postprocessor-args", " ".join(postprocessor_args)])
+
+    subprocess.run(command, check=True)
 
     return audio_filename
 
 
 def is_valid_audio_file(file_path):
-    """Checks if the audio file exists and has a reasonable size."""
     return os.path.exists(file_path) and os.path.getsize(file_path) > 1000
 
 
 def process_audio_file(audio_filename):
-    """Processes the audio file by trimming, and adding intro, outro, and silence."""
-    output_file_name = f"{datetime.now().strftime('%Y-%m-%d')}_final.mp3"
+    output_file_name = f"{datetime.now().strftime('%Y-%m-%d')}_processed.mp3"
 
     trimmed_audio = AudioFileClip(audio_filename)
     intro_audio_path = '../extras/intro.wav'
@@ -59,6 +62,24 @@ def process_audio_file(audio_filename):
     return output_file_name
 
 
+def apply_default_compression(input_file_name):
+    compressed_file_name = f"compressed_{input_file_name}"
+    knee = 2.5  # in dB
+    attack = 5  # in milliseconds
+    release = 50  # in milliseconds
+    makeup = 4  # in dB
+
+    subprocess.run([
+        'ffmpeg',
+        '-i', input_file_name,
+        '-filter_complex',
+        f'acompressor=threshold=-32dB:ratio=2:knee={knee}:attack={attack}:release={release}:makeup={makeup}',
+        '-y', compressed_file_name
+    ], check=True)
+
+    return compressed_file_name
+
+
 def main():
     try:
         youtube_url = input("Enter the YouTube URL: ")
@@ -76,13 +97,13 @@ def main():
                 f"The file {downloaded_audio_file} was not created or is too small. Please check for errors.")
             exit(1)
 
-        try:
-            final_output_file = process_audio_file(downloaded_audio_file)
-            print(
-                f"Your file has been processed and saved to {final_output_file}")
-        except Exception as error:
-            print(f"An error occurred during audio processing: {error}")
-            exit(1)
+        processed_output_file = process_audio_file(downloaded_audio_file)
+        compressed_output_file = apply_default_compression(
+            processed_output_file)
+
+        print(
+            f"Your file has been processed and saved to {compressed_output_file}")
+
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
