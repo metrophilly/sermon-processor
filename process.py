@@ -2,75 +2,90 @@ import os
 import subprocess
 from datetime import datetime
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
-from pydub import AudioSegment
 
 
-def format_time(time_str):
-    return time_str if time_str else "00:00:00"
+def get_formatted_time(time_input):
+    """Formats the time input to HH:MM:SS format or defaults to zero."""
+    return time_input if time_input else "00:00:00"
 
 
-youtube_url = input("Enter the YouTube URL: ")
-start_time_input = input(
-    "Enter the start timestamp (HH:MM:SS or MM:SS or SS), or press Enter to use the full audio: ")
-end_time_input = input(
-    "Enter the end timestamp (HH:MM:SS or MM:SS or SS), or press Enter to use the full audio: ")
+def create_and_change_directory():
+    """Creates a new directory based on the current date and changes the working directory to it."""
+    date_directory = datetime.now().strftime("%Y-%m-%d")
+    os.makedirs(date_directory, exist_ok=True)
+    os.chdir(date_directory)
 
-start_time_formatted = format_time(start_time_input)
-end_time_formatted = format_time(end_time_input)
 
-current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_template = f"downloaded_audio_{current_datetime}.%(ext)s"
+def download_audio_from_youtube(youtube_url, start_time, end_time):
+    """Downloads audio from a YouTube URL with optional start and end timestamps."""
+    download_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    audio_filename = f"downloaded_audio_{download_time}.mp3"
 
-# Ensure the postprocessor arguments are correctly formatted
-postprocessor_args = f"-ss {start_time_formatted} -to {end_time_formatted}" if start_time_input or end_time_input else ""
+    postprocessor_args = f"-ss {start_time} -to {end_time}" if start_time or end_time else ""
+    subprocess.run([
+        "yt-dlp", "--progress", "-x", "--audio-format", "mp3",
+        "-o", f"downloaded_audio_{download_time}.%(ext)s",
+        "--postprocessor-args", postprocessor_args,
+        youtube_url
+    ], check=True)
 
-try:
-    os.makedirs(datetime.now().strftime("%Y-%m-%d"), exist_ok=True)
-    os.chdir(datetime.now().strftime("%Y-%m-%d"))
-except Exception as e:
-    print(f"Error in directory handling: {e}")
-    exit(1)
+    return audio_filename
 
-subprocess.run([
-    "yt-dlp",
-    "--progress",
-    "-x",
-    "--audio-format", "mp3",
-    "-o", output_template,
-    "--postprocessor-args", postprocessor_args,
-    youtube_url
-], check=True)
 
-downloaded_audio_filename = f"downloaded_audio_{current_datetime}.mp3"
+def is_valid_audio_file(file_path):
+    """Checks if the audio file exists and has a reasonable size."""
+    return os.path.exists(file_path) and os.path.getsize(file_path) > 1000
 
-# Checking for file existence and reasonable size
-if not os.path.exists(downloaded_audio_filename) or os.path.getsize(downloaded_audio_filename) < 1000:
-    print(f"The file {downloaded_audio_filename} was not created or is too small. Please check for errors in the yt-dlp command.")
-    exit(1)
 
-# Proceed with moviepy processing only if the audio file is valid
-try:
-    trimmed_clip = AudioFileClip(downloaded_audio_filename)
+def process_audio_file(audio_filename):
+    """Processes the audio file by trimming, and adding intro, outro, and silence."""
+    output_file_name = f"{datetime.now().strftime('%Y-%m-%d')}_final.mp3"
 
-    # Assuming prepend_audio_path and append_audio_path are defined earlier in your script
-    prepend_audio_path = '../extras/intro.wav'
-    append_audio_path = '../extras/outro.wav'
+    trimmed_audio = AudioFileClip(audio_filename)
+    intro_audio_path = '../extras/intro.wav'
+    outro_audio_path = '../extras/outro.wav'
 
-    prepend_clip = AudioFileClip(prepend_audio_path) if os.path.exists(
-        prepend_audio_path) else None
-    append_clip = AudioFileClip(append_audio_path) if os.path.exists(
-        append_audio_path) else None
-    silent_clip = AudioClip(lambda _: [0, 0], duration=1.5, fps=44100)
+    intro_audio = AudioFileClip(intro_audio_path) if os.path.exists(
+        intro_audio_path) else None
+    outro_audio = AudioFileClip(outro_audio_path) if os.path.exists(
+        outro_audio_path) else None
+    silence_audio = AudioClip(lambda _: [0, 0], duration=1.5, fps=44100)
 
-    clips_to_concatenate = [prepend_clip, silent_clip, trimmed_clip, silent_clip,
-                            append_clip] if prepend_clip and append_clip else [trimmed_clip]
+    audio_clips = [clip for clip in [intro_audio, silence_audio,
+                                     trimmed_audio, silence_audio, outro_audio] if clip]
+    final_audio = concatenate_audioclips(audio_clips)
+    final_audio.write_audiofile(output_file_name, codec='libmp3lame')
 
-    final_clip = concatenate_audioclips(clips_to_concatenate)
-    output_file_path = f"{datetime.now().strftime('%Y-%m-%d')}_final.mp3"
-    final_clip.write_audiofile(output_file_path, codec='libmp3lame')
+    return output_file_name
 
-    print(f"Your file has been processed and saved to {output_file_path}")
 
-except Exception as e:
-    print(f"An error occurred during audio processing: {e}")
-    exit(1)
+def main():
+    try:
+        youtube_url = input("Enter the YouTube URL: ")
+        start_time = get_formatted_time(input(
+            "Enter the start timestamp (HH:MM:SS/MM:SS/SS), or press Enter for full audio: "))
+        end_time = get_formatted_time(input(
+            "Enter the end timestamp (HH:MM:SS/MM:SS/SS), or press Enter for full audio: "))
+        create_and_change_directory()
+
+        downloaded_audio_file = download_audio_from_youtube(
+            youtube_url, start_time, end_time)
+
+        if not is_valid_audio_file(downloaded_audio_file):
+            print(
+                f"The file {downloaded_audio_file} was not created or is too small. Please check for errors.")
+            exit(1)
+
+        try:
+            final_output_file = process_audio_file(downloaded_audio_file)
+            print(
+                f"Your file has been processed and saved to {final_output_file}")
+        except Exception as error:
+            print(f"An error occurred during audio processing: {error}")
+            exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()
