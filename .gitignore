@@ -1,1 +1,3 @@
 sermon-processor-env/
+__pycache__/
+outputs/

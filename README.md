@@ -1,7 +1,8 @@
-# Sermon Processor Project Setup
+# 🎛️ Metro Sermons Processor
 
-This guide will walk you through setting up a Python environment for the
-sermon-processor project on macOS.
+This is a small script to automate the downloading, processing, and scrubbing of
+Metro's weekly sermons from YouTube. This guide will walk you through setting up
+a Python environment for the sermon-processor project on macOS.
 
 ## Prerequisites
 
@@ -49,7 +50,7 @@ With the virtual environment activated, install the required packages using
 `pip`:
 
 ```bash
-pip install moviepy yt-dlp
+pip install -r requirements.txt
 ```
 
 These packages will only be available within this virtual environment and are
@@ -57,7 +58,7 @@ required for the sermon-processor project.
 
 ## Running the Project
 
-After installing the required packages, you can run the project's Python script:
+After installing the required packages, you can run the processor by running:
 
 ```bash
 python process.py
@@ -67,6 +68,15 @@ Follow the prompts to input the YouTube URL and timestamps for audio processing.
 Once the automated processing in complete, follow the steps of the resulting
 helper text file to make final scrub edits in Audacity, export the file as a
 .mp3, and hand it off to be uploaded and distributed.
+
+## Running Tests
+
+To run the base unit tests (many still wip), you can run the following from the
+root directory:
+
+```bash
+python -m unittest
+```
 
 ## Deactivating the Virtual Environment
 

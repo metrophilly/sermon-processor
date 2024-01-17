@@ -2,6 +2,7 @@ import os
 import subprocess
 from datetime import datetime
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
+from utils.helpers import is_valid_time, is_valid_audio_file, is_audacity_installed, SCRIPT_DIR
 
 
 def get_video_upload_date(youtube_url):
@@ -22,11 +23,15 @@ def get_formatted_time(time_input):
 
 
 def create_and_change_directory(upload_date):
-    os.makedirs(upload_date, exist_ok=True)
-    os.chdir(upload_date)
+    output_dir = os.path.join('outputs', upload_date)
+    os.makedirs(output_dir, exist_ok=True)
+    os.chdir(output_dir)
 
 
 def download_audio_from_youtube(youtube_url, start_time, end_time, upload_date):
+    if not is_valid_time(start_time) or not is_valid_time(end_time):
+        raise ValueError("Invalid time format")
+    
     audio_filename = f"downloaded_audio_{upload_date}.mp3"
 
     postprocessor_args = []
@@ -48,16 +53,13 @@ def download_audio_from_youtube(youtube_url, start_time, end_time, upload_date):
     return audio_filename
 
 
-def is_valid_audio_file(file_path):
-    return os.path.exists(file_path) and os.path.getsize(file_path) > 1000
-
-
 def process_audio_file(audio_filename, upload_date):
     output_file_name = f"{upload_date}_processed.mp3"
 
+    intro_audio_path = os.path.join(SCRIPT_DIR, 'extras', 'intro.wav')
+    outro_audio_path = os.path.join(SCRIPT_DIR, 'extras', 'outro.wav')
+
     trimmed_audio = AudioFileClip(audio_filename)
-    intro_audio_path = '../extras/intro.wav'
-    outro_audio_path = '../extras/outro.wav'
 
     intro_audio = AudioFileClip(intro_audio_path) if os.path.exists(
         intro_audio_path) else None
@@ -89,15 +91,6 @@ def apply_default_compression(input_file_name, upload_date):
     ], check=True)
 
     return compressed_file_name
-
-
-def is_audacity_installed():
-    try:
-        result = subprocess.run(
-            ["mdfind", "kMDItemCFBundleIdentifier == 'org.audacityteam.audacity'"], stdout=subprocess.PIPE)
-        return bool(result.stdout.strip())
-    except subprocess.CalledProcessError:
-        return False
 
 
 def main():
@@ -139,8 +132,7 @@ def main():
         subprocess.run(["open", "-a", "Audacity",
                        compressed_output_file], check=True)
 
-        helper_text_file = os.path.join(
-            '..', 'extras', 'final_process_walkthrough.md')
+        helper_text_file = os.path.join(SCRIPT_DIR, 'extras', 'final_process_walkthrough.md')
         subprocess.run(['open', helper_text_file])
 
     except Exception as e:
