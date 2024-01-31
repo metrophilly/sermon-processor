@@ -2,7 +2,7 @@ import os
 import subprocess
 from datetime import datetime
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
-from utils.helpers import is_valid_time, is_valid_audio_file, is_audacity_installed, SCRIPT_DIR
+from utils.helpers import is_valid_time, is_valid_audio_file, is_audacity_installed, SCRIPT_DIR, is_yt_dlp_installed
 
 
 def get_video_upload_date(youtube_url):
@@ -98,6 +98,11 @@ def main():
         # pre-checks
         if not is_audacity_installed():
             print("Audacity does not appear to be installed on this machine. Please install Audacity and try again.")
+            exit(1)
+        
+
+        if not is_yt_dlp_installed():
+            print("yt-dlp does not appear to be installed on this machine. Please install yt-dlp and try again.")
             exit(1)
 
         # user inputs

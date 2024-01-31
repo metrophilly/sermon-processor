@@ -22,3 +22,11 @@ def is_audacity_installed():
         return bool(result.stdout.strip())
     except subprocess.CalledProcessError:
         return False
+
+    
+def is_yt_dlp_installed():
+    try:
+        result = subprocess.run(["yt-dlp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
