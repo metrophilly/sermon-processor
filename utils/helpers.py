@@ -1,8 +1,9 @@
 import re
 import os
-import subprocess
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+OUTPUT_BASE_DIR = os.path.join(SCRIPT_DIR, 'data')
 
 def is_valid_time(time_str):
     """Check if the time string is in a valid HH:MM:SS, MM:SS, or SS format."""
@@ -15,18 +16,29 @@ def is_valid_audio_file(file_path):
     return os.path.exists(file_path) and os.path.getsize(file_path) > 1000
 
 
-def is_audacity_installed():
-    try:
-        result = subprocess.run(
-            ["mdfind", "kMDItemCFBundleIdentifier == 'org.audacityteam.audacity'"], stdout=subprocess.PIPE)
-        return bool(result.stdout.strip())
-    except subprocess.CalledProcessError:
-        return False
+def confirmation_printout(upload_date):
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RESET = '\033[0m'
 
-    
-def is_yt_dlp_installed():
-    try:
-        result = subprocess.run(["yt-dlp", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return result.returncode == 0
-    except FileNotFoundError:
-        return False
+    print(f"""{GREEN}
+    ===================
+    🎛️ SERMON PROCESSOR
+    ===================
+
+    Your file has been processed and saved to {YELLOW}./data/{upload_date}_ready_to_scrub.mp3{GREEN}.
+
+    Please follow the manual finishing touches:
+
+    1. Open the audio file in Audacity or a similar tool.
+    2. Trim excess silence between clips, aiming for 1.5-second gaps (focus on the
+      intro, scripture passage & reading, and the sermon).
+    3. Smooth out any rough transitions or "bumps" where clips are stitched
+      together.
+    4. Trim the pastor's final prayer at the end, while keeping Rhea's outro intact.
+    5. Export the edited audio as an MP3 file named "yyyy-mm-dd.mp3".
+    6. Send to the reviewer.
+
+    Remember: Careful editing ensures a polished final product, and your attention to
+    detail will enhance our listeners' experience. Thank you for your contribution!
+    {RESET}""")
