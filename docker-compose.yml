@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  sermon-processor:
+    build: .
+    image: sermon-processor
+    volumes:
+      - ./data:/usr/src/app/data
+      - .:/path/in/container
+    command: python ./process.py
+    stdin_open: true
+    tty: true
