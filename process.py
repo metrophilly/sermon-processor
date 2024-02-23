@@ -2,8 +2,7 @@ import os
 import subprocess
 from datetime import datetime
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
-from utils.helpers import is_valid_time, is_valid_audio_file, is_audacity_installed, SCRIPT_DIR, is_yt_dlp_installed
-
+from utils.helpers import is_valid_time, is_valid_audio_file, SCRIPT_DIR, OUTPUT_BASE_DIR, confirmation_printout
 
 def get_video_upload_date(youtube_url):
     command = [
@@ -23,16 +22,16 @@ def get_formatted_time(time_input):
 
 
 def create_and_change_directory(upload_date):
-    output_dir = os.path.join('outputs', upload_date)
+    output_dir = os.path.join(OUTPUT_BASE_DIR, upload_date)
     os.makedirs(output_dir, exist_ok=True)
-    os.chdir(output_dir)
+    return output_dir
 
 
-def download_audio_from_youtube(youtube_url, start_time, end_time, upload_date):
+def download_audio_from_youtube(youtube_url, start_time, end_time, output_dir):
     if not is_valid_time(start_time) or not is_valid_time(end_time):
         raise ValueError("Invalid time format")
     
-    audio_filename = f"downloaded_audio_{upload_date}.mp3"
+    audio_filename = os.path.join(output_dir, "_01_downloaded_raw.mp3")
 
     postprocessor_args = []
     if start_time != "00:00:00":
@@ -53,8 +52,8 @@ def download_audio_from_youtube(youtube_url, start_time, end_time, upload_date):
     return audio_filename
 
 
-def process_audio_file(audio_filename, upload_date):
-    output_file_name = f"{upload_date}_processed.mp3"
+def process_audio_file(audio_filename, output_dir):
+    output_file_name = os.path.join(output_dir, "_02_trimmed_raw.mp3")
 
     intro_audio_path = os.path.join(SCRIPT_DIR, 'extras', 'intro.wav')
     outro_audio_path = os.path.join(SCRIPT_DIR, 'extras', 'outro.wav')
@@ -75,8 +74,8 @@ def process_audio_file(audio_filename, upload_date):
     return output_file_name
 
 
-def apply_default_compression(input_file_name, upload_date):
-    compressed_file_name = f"{upload_date}_compressed.mp3"
+def apply_compression(input_file_name, upload_date, output_dir):
+    output_file_name = os.path.join(output_dir, f"{upload_date}_ready_to_scrub.mp3")
     knee = 2.5  # in dB
     attack = 5  # in milliseconds
     release = 50  # in milliseconds
@@ -87,24 +86,14 @@ def apply_default_compression(input_file_name, upload_date):
         '-i', input_file_name,
         '-filter_complex',
         f'acompressor=threshold=-32dB:ratio=2:knee={knee}:attack={attack}:release={release}:makeup={makeup}',
-        '-y', compressed_file_name
+        '-y', output_file_name
     ], check=True)
 
-    return compressed_file_name
+    return output_file_name
 
 
 def main():
     try:
-        # pre-checks
-        if not is_audacity_installed():
-            print("Audacity does not appear to be installed on this machine. Please install Audacity and try again.")
-            exit(1)
-        
-
-        if not is_yt_dlp_installed():
-            print("yt-dlp does not appear to be installed on this machine. Please install yt-dlp and try again.")
-            exit(1)
-
         # user inputs
         youtube_url = input("Enter the YouTube URL: ")
         start_time = get_formatted_time(input(
@@ -114,10 +103,10 @@ def main():
 
         upload_date = get_video_upload_date(youtube_url)
 
-        create_and_change_directory(upload_date)
+        output_dir = create_and_change_directory(upload_date)
 
         downloaded_audio_file = download_audio_from_youtube(
-            youtube_url, start_time, end_time, upload_date)
+            youtube_url, start_time, end_time, output_dir)
 
         if not is_valid_audio_file(downloaded_audio_file):
             print(
@@ -125,24 +114,16 @@ def main():
             exit(1)
 
         # audio processing and compressions
-        processed_output_file = process_audio_file(
-            downloaded_audio_file, upload_date)
-        compressed_output_file = apply_default_compression(
-            processed_output_file, upload_date)
+        processed_file_name = process_audio_file(
+            downloaded_audio_file, output_dir)
+        apply_compression(
+            processed_file_name, upload_date, output_dir)
 
-        print(
-            f"Your file has been processed and saved to {compressed_output_file}")
-
-        # kick off final manual edits and helper text
-        subprocess.run(["open", "-a", "Audacity",
-                       compressed_output_file], check=True)
-
-        helper_text_file = os.path.join(SCRIPT_DIR, 'extras', 'final_process_walkthrough.md')
-        subprocess.run(['open', helper_text_file])
+        # final printouts
+        confirmation_printout(output_dir)
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-
 
 if __name__ == "__main__":
     main()

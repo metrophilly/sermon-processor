@@ -2,95 +2,51 @@
 
 This is a small script to automate the downloading, processing, and scrubbing of
 Metro's weekly sermons from YouTube. This guide will walk you through setting up
-a Python environment for the sermon-processor project on macOS.
+the sermon-processor project using Docker.
 
 ## Prerequisites
 
-Before you start, make sure you have Python 3 and the Audacity app installed on
-your system. You can check your Python version by running:
+Ensure you have `Docker` and `docker-compose` installed on your system. You can
+check if they're installed by running:
 
 ```bash
-python3 --version
+docker --version
+docker-compose --version
 ```
 
-## Create a Virtual Environment
+## Build Docker Image
 
-To create an isolated environment for the sermon-processor project, follow these
-steps:
-
-1. **Navigate to your project directory:**
+Docker-compose simplifies the setup process by containerizing the environment
+and dependencies. Follow these steps to build the docker image.
 
 ```bash
-cd path/to/your/sermon-processor
+docker-compose build
 ```
 
-2. **Create the virtual environment:**
+## Run the Script
+
+Now run the `sermon-processor` image we just built. (Usually we could run `up`,
+but we need to use `run` because we need to interact with the script to add the
+url and timestamp inputs.)
 
 ```bash
-python3 -m venv sermon-processor-env
-```
-
-This command will create a new directory named `sermon-processor-env` in your
-project directory containing the virtual environment.
-
-## Activate the Virtual Environment
-
-Before installing any packages, you need to activate the virtual environment.
-You can do this by running:
-
-```bash
-source sermon-processor-env/bin/activate
-```
-
-Your prompt will change to indicate that you are now in a virtual environment.
-
-## Install Required Packages
-
-With the virtual environment activated, install the required packages using
-`pip`:
-
-```bash
-pip install -r requirements.txt
-```
-
-These packages will only be available within this virtual environment and are
-required for the sermon-processor project.
-
-## Running the Project
-
-After installing the required packages, you can run the processor by running:
-
-```bash
-python process.py
+docker-compose run sermon-processor
 ```
 
 Follow the prompts to input the YouTube URL and timestamps for audio processing.
-Once the automated processing in complete, follow the steps of the resulting
-helper text file to make final scrub edits in Audacity, export the file as a
-.mp3, and hand it off to be uploaded and distributed.
 
-## Running Tests
+## Post-Processing
 
-To run the base unit tests (many still wip), you can run the following from the
-root directory:
+Once the automated processing is complete, the final audio file will be saved to
+`./data/` by default, or the specified data directory on your host machine.
+Afterwards, follow the manual steps that print in the console.
 
-```bash
-python -m unittest
-```
+## Deactivating Docker Container
 
-## Deactivating the Virtual Environment
-
-Once you are finished with your session, you can deactivate the virtual
-environment by running:
+When you're done, the Docker container will automatically stop as we've used the
+`--rm` flag, which removes the container after it exits. If you'd like to
+manually stop the image, you can run the following:
 
 ```bash
-deactivate
+docker-compose down
 ```
-
-This will return you to the system's default Python interpreter.
-
-## Additional Notes
-
-- To manage different Python versions, consider using `pyenv`.
-- For any additional project-specific instructions, update this section
-  accordingly.
