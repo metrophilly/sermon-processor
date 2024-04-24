@@ -1,5 +1,7 @@
 sermon-processor-env/
 __pycache__/
 data/
+tmp/
 
-config.txt
+config/config.txt
+config/base.mp4

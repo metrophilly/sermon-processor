@@ -20,7 +20,7 @@ The file `config.txt` allows for pre-filled url, start, and end time parameters.
 If you don't have it, run the following command to use the provided template.
 
 ```bash
-cp config.example.txt config.txt
+cp config/config.example.txt config/config.txt
 ```
 
 ## Build Docker Image

@@ -57,11 +57,11 @@ def ensure_dir_exists(path: str):
 
 
 def ensure_audio(video_path, base_settings):
-    # Ensure temp directory exists and get its path
-    temp_dir = ensure_dir_exists("temp")
+    # Ensure tmp directory exists and get its path
+    tmp_dir = ensure_dir_exists("tmp")
 
-    # Construct path for the silent audio file within the temp directory
-    silent_audio_path = os.path.join(temp_dir, "silent_audio.aac")
+    # Construct path for the silent audio file within the tmp directory
+    silent_audio_path = os.path.join(tmp_dir, "silent_audio.aac")
 
     # Generate silent audio with settings from base_settings
     run_command(
@@ -86,9 +86,9 @@ def ensure_audio(video_path, base_settings):
         ]
     )
 
-    # Generate new video path with audio in the temp directory
-    temp_video_path = os.path.join(
-        temp_dir, f"{os.path.basename(video_path).split('.')[0]}_with_audio.mp4"
+    # Generate new video path with audio in the tmp directory
+    tmp_video_path = os.path.join(
+        tmp_dir, f"{os.path.basename(video_path).split('.')[0]}_with_audio.mp4"
     )
 
     # Combine video with the generated silent audio file
@@ -113,13 +113,13 @@ def ensure_audio(video_path, base_settings):
                 "sample_rate"
             ],  # Ensure sample rate is consistent with base_settings
             # "-shortest",  # Ensure output duration matches the shortest of video or audio streams
-            temp_video_path,
+            tmp_video_path,
         ]
     )
 
     # Clean up by removing the silent audio file after use
     os.remove(silent_audio_path)
-    return temp_video_path
+    return tmp_video_path
 
 
 def get_video_settings(video_path):
@@ -146,14 +146,14 @@ def get_video_settings(video_path):
 
 def extract_segments_for_crossfade(video_path, segment_duration):
     """Extracts the first and last segments of the video for crossfading."""
-    temp_dir = ensure_dir_exists("temp")
+    tmp_dir = ensure_dir_exists("tmp")
 
     video_duration = get_video_duration(video_path)
     start_segment = os.path.join(
-        temp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_start.mp4"
+        tmp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_start.mp4"
     )
     end_segment = os.path.join(
-        temp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_end.mp4"
+        tmp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_end.mp4"
     )
 
     # Extract the first segment
@@ -196,10 +196,10 @@ def extract_segments_for_crossfade(video_path, segment_duration):
 
 
 def trim_base_video(video_path, segment_duration, base_settings):
-    temp_dir = ensure_dir_exists("temp")
+    tmp_dir = ensure_dir_exists("tmp")
 
     trimmed_video_path = os.path.join(
-        temp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_trimmed.mp4"
+        tmp_dir, f"{os.path.splitext(os.path.basename(video_path))[0]}_trimmed.mp4"
     )
     video_duration = get_video_duration(video_path)
 
@@ -317,27 +317,27 @@ class PathsDict(TypedDict, total=False):
 
 
 def main() -> None:
-    ensure_dir_exists("temp")
+    ensure_dir_exists("tmp")
     ensure_dir_exists("output")
 
     paths: PathsDict = {
         "intro": {
-            "raw": "./videos/INTRO.mp4",
-            "compressed": "./temp/01-INTRO_compressed.mp4",
-            "crossfaded": "./temp/04-INTRO-BASE_crossfaded.mp4",
+            "raw": "./extras/video/intro.mp4",
+            "compressed": "./tmp/01-intro_compressed.mp4",
+            "crossfaded": "./tmp/04-intro-base_crossfaded.mp4",
         },
         "base": {
-            "raw": "./videos/BASE.mp4",
-            "compressed": "./temp/02-BASE_compressed.mp4",
-            "crossfaded": "./temp/05-BASE-OUTPUT_crossfaded.mp4",
+            "raw": "./config/base.mp4",
+            "compressed": "./tmp/02-base_compressed.mp4",
+            "crossfaded": "./tmp/05-base-output_crossfaded.mp4",
         },
         "outro": {
-            "raw": "./videos/OUTRO.mp4",
-            "compressed": "./temp/03-OUTRO_compressed.mp4",
+            "raw": "./extras/video/outro.mp4",
+            "compressed": "./tmp/03-outro_compressed.mp4",
         },
     }
 
-    final_path: str = "./output/FINAL_full-compressed.mp4"
+    final_path: str = "./data/FINAL_full-compressed.mp4"
 
     # apply "standard loudness" to all clips individually
     for key in paths.keys():

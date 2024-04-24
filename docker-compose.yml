@@ -5,6 +5,7 @@ services:
     image: sermon-processor
     volumes:
       - ./data:/usr/src/app/data
+      - ./tmp:/usr/src/app/tmp
     command: python3 ./startup.py
     stdin_open: true
     tty: true
