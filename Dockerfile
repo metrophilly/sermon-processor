@@ -15,4 +15,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "./process.py"]
+CMD ["python3", "./startup.py"]

@@ -161,7 +161,7 @@ def transcribe_audio(audio_file_path, upload_date, output_dir):
 def main():
     
     # parse preset params
-    config_file_path = 'config.txt'
+    config_file_path = 'config/config.txt'
     config = read_config_file(config_file_path)
     youtube_url, start_time, end_time = parse_parameters(config)
 

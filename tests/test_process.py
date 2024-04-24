@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from process import get_video_upload_date, get_formatted_time, download_audio_from_youtube
+from src.process import get_video_upload_date, get_formatted_time, download_audio_from_youtube
 
 class TestDownloadAudioFromYoutube(unittest.TestCase):
 
