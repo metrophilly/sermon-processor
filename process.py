@@ -1,17 +1,18 @@
-import asyncio
 import json
 import os
 import subprocess
 from datetime import datetime
 import whisper
-import requests
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
 from utils.helpers import (
+    confirm_parameters,
     is_valid_time,
     is_valid_audio_file,
     SCRIPT_DIR,
     OUTPUT_BASE_DIR,
     confirmation_printout,
+    parse_parameters,
+    read_config_file,
 )
 
 
@@ -27,10 +28,6 @@ def get_video_upload_date(youtube_url):
     result = subprocess.run(command, stdout=subprocess.PIPE, check=True)
     upload_date = result.stdout.decode("utf-8").strip()
     return datetime.strptime(upload_date, "%Y%m%d").strftime("%Y-%m-%d")
-
-
-def get_formatted_time(time_input):
-    return time_input if time_input else "00:00:00"
 
 
 def create_and_change_directory(upload_date):
@@ -162,27 +159,18 @@ def transcribe_audio(audio_file_path, upload_date, output_dir):
 
 
 def main():
+    
+    # parse preset params
+    config_file_path = 'config.txt'
+    config = read_config_file(config_file_path)
+    youtube_url, start_time, end_time = parse_parameters(config)
+
+    confirm_parameters(youtube_url, start_time, end_time)
+
     try:
-        # user inputs
-        youtube_url = input("Enter the YouTube URL: ")
-        start_time = get_formatted_time(
-            input(
-                "Enter the start timestamp (HH:MM:SS/MM:SS/SS), or press Enter for full audio: "
-            )
-        )
-        end_time = get_formatted_time(
-            input(
-                "Enter the end timestamp (HH:MM:SS/MM:SS/SS), or press Enter for full audio: "
-            )
-        )
-
         upload_date = get_video_upload_date(youtube_url)
-
         output_dir = create_and_change_directory(upload_date)
-
-        downloaded_audio_file = download_audio_from_youtube(
-            youtube_url, start_time, end_time, output_dir
-        )
+        downloaded_audio_file = download_audio_from_youtube(youtube_url, start_time, end_time, output_dir)
 
         if not is_valid_audio_file(downloaded_audio_file):
             print(
@@ -193,7 +181,8 @@ def main():
         # audio processing and compressions
         processed_file_name = process_audio_file(downloaded_audio_file, output_dir)
         apply_compression(processed_file_name, upload_date, output_dir)
-        transcribe_audio(processed_file_name, upload_date, output_dir)
+        # transcribe_audio(processed_file_name, upload_date, output_dir)
+
         # final printouts
         confirmation_printout(output_dir)
 

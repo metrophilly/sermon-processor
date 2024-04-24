@@ -14,6 +14,15 @@ docker --version
 docker-compose --version
 ```
 
+## Set config parameters
+
+The file `config.txt` allows for pre-filled url, start, and end time parameters.
+If you don't have it, run the following command to use the provided template.
+
+```bash
+cp config.example.txt config.txt
+```
+
 ## Build Docker Image
 
 Docker-compose simplifies the setup process by containerizing the environment
@@ -23,7 +32,7 @@ and dependencies. Follow these steps to build the docker image.
 docker-compose build
 ```
 
-## Run the Script
+## Run the script
 
 Now run the `sermon-processor` image we just built. (Usually we could run `up`,
 but we need to use `run` because we need to interact with the script to add the
