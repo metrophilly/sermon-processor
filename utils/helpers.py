@@ -32,7 +32,7 @@ def confirmation_printout(upload_date):
 
     1. Open the audio file in Audacity or a similar tool.
     2. Trim excess silence between clips, aiming for 1.5-second gaps (focus on the
-      intro, scripture passage & reading, and the sermon).
+      intro, scripture passage, and the sermon).
     3. Smooth out any rough transitions or "bumps" where clips are stitched
       together.
     4. Trim the pastor's final prayer at the end, while keeping Rhea's outro intact.
@@ -42,3 +42,49 @@ def confirmation_printout(upload_date):
     Remember: Careful editing ensures a polished final product, and your attention to
     detail will enhance our listeners' experience. Thank you for your contribution!
     {RESET}""")
+
+
+def get_formatted_time(time_input):
+    return time_input if time_input else "00:00:00"
+
+
+def read_config_file(config_file_path):
+    """Read configuration from a file and return a dictionary of parameters."""
+    config = {}
+    try:
+        with open(config_file_path, 'r') as file:
+            for line in file:
+                key, value = line.strip().split('=', 1)
+                config[key.strip().lower()] = value.strip()
+    except FileNotFoundError:
+        print(f"Configuration file not found: {config_file_path}")
+        print(f"Please run `cp config.example.txt config.txt` and adjust the config parameters")
+        exit(1)
+    except ValueError:
+        print("Configuration file format error, should be 'key=value'")
+        exit(1)
+    return config
+
+
+def parse_parameters(config):
+    """Parse and format parameters from the configuration dictionary."""
+    try:
+        youtube_url = config['url']
+        start_time = get_formatted_time(config['start'])
+        end_time = get_formatted_time(config['end'])
+    except KeyError as e:
+        print(f"Missing necessary configuration parameter: {e}")
+        exit(1)
+    return youtube_url, start_time, end_time
+
+
+def confirm_parameters(youtube_url, start_time, end_time):
+    """Ask the user to confirm the parameters before proceeding."""
+    print("Please confirm if these are the correct parameters:")
+    print(f"URL: {youtube_url}")
+    print(f"Start Time: {start_time}")
+    print(f"End Time: {end_time}")
+    response = input("Continue with these parameters? [y/N]: ")
+    if response.strip().lower() != 'y':
+        print("Operation aborted by the user.")
+        exit(0)
