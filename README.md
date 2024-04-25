@@ -20,16 +20,13 @@ The file `config.txt` allows for pre-filled parameters. If you don't have it,
 run the following command to use the provided template.
 
 ```bash
-cp config/config.example.txt config/config.txt
+cp config.example.txt config.txt
 ```
 
-Ensure that you have the following params set to run the script:
+Ensure that you have the `url, start, and end` params set to run the script.
 
-- For audio:
-  - url, start, and end time
-- For video:
-  - (for now) the 'base' video set to `config/base.mp4`
-  - the intro and outro urls should be consistent
+- For video, the intro and outro urls should be the same as the ones in the
+  `config.example.txt`.
 
 ## Build Docker Image
 
@@ -54,15 +51,9 @@ Follow the prompts to either run the `[a]udio` or `[v]ideo` scripts.
 
 ## Post-Processing
 
-#### Audio
-
-Once the automated processing is complete, the final audio file will be saved to
+Once the automated processing is complete, the final media file will be saved to
 `./data/` by default, or the specified data directory on your host machine.
 Afterwards, follow the manual steps that print in the console.
-
-#### Video
-
-The final video will be saved as `./data/FINAL_full-compressed.mp4` by default.
 
 ## Deactivating Docker Container
 

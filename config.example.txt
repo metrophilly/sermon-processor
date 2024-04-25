@@ -1,5 +1,5 @@
 URL   = https://www.youtube.com/watch?v=mjjp0dnX3Xc
-START = 00:00:10
+START = 00:00:30
 END   = 00:02:12
 VIDEO_INTRO = https://metrophillyaws.s3.us-east-2.amazonaws.com/sermon-processor/INTRO.mp4
 VIDEO_OUTRO = https://metrophillyaws.s3.us-east-2.amazonaws.com/sermon-processor/OUTRO.mp4

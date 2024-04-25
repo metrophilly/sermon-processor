@@ -6,7 +6,6 @@ COPY requirements.txt .
 
 RUN apt-get update && apt-get install -y \
   ffmpeg \
-  audacity \
   yt-dlp \
   git \
   && rm -rf /var/lib/apt/lists/*

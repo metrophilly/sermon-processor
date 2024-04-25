@@ -1,9 +1,10 @@
 def confirmation_printout(upload_date):
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RESET = '\033[0m'
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RESET = "\033[0m"
 
-    print(f"""{GREEN}
+    print(
+        f"""{GREEN}
     ===================
     🎛️ SERMON PROCESSOR
     ===================
@@ -23,7 +24,8 @@ def confirmation_printout(upload_date):
 
     Remember: Careful editing ensures a polished final product, and your attention to
     detail will enhance our listeners' experience. Thank you for your contribution!
-    {RESET}""")
+    {RESET}"""
+    )
 
 
 def confirm_parameters(youtube_url, start_time, end_time):
@@ -33,6 +35,6 @@ def confirm_parameters(youtube_url, start_time, end_time):
     print(f"Start Time: {start_time}")
     print(f"End Time: {end_time}")
     response = input("Continue with these parameters? [y/N]: ")
-    if response.strip().lower() != 'y':
+    if response.strip().lower() != "y":
         print("Operation aborted by the user.")
         exit(0)

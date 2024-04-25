@@ -3,5 +3,4 @@ __pycache__/
 data/
 tmp/
 
-config/config.txt
-config/base.mp4
+config.txt

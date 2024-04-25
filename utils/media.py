@@ -4,6 +4,7 @@ import subprocess
 import requests
 import os
 from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
+from typing import Literal
 
 from utils.file import ensure_dir_exists
 from utils.helpers import run_command
@@ -77,39 +78,67 @@ def ensure_audio(video_path, base_settings):
     return tmp_video_path
 
 
-def download_audio_from_youtube(youtube_url, start_time, end_time, output_dir):
+def download_media_from_youtube(
+    youtube_url: str,
+    start_time: str,
+    end_time: str,
+    upload_date: str,
+    media_type: Literal["audio", "video"] = "audio",
+) -> str:
     if not is_valid_time(start_time) or not is_valid_time(end_time):
         raise ValueError("Invalid time format")
 
-    audio_filename = os.path.join(output_dir, "_01_downloaded_raw.mp3")
+    # Define filename based on media type
+    media_filename = os.path.join(
+        "tmp",
+        f"{upload_date}_base_downloaded_raw.{'mp3' if media_type == 'audio' else 'mp4'}",
+    )
 
-    postprocessor_args = []
-    if start_time != "00:00:00":
-        postprocessor_args.extend(["-ss", start_time])
-    if end_time != "00:00:00":
-        postprocessor_args.extend(["-to", end_time])
+    # Configuring command for different media types
+    if media_type == "audio":
+        command = [
+            "yt-dlp",
+            "--progress",
+            "-x",
+            "--audio-format",
+            "mp3",
+            "-o",
+            media_filename,
+            youtube_url,
+        ]
+    elif media_type == "video":
+        command = [
+            "yt-dlp",
+            "--progress",
+            "--format",
+            "bestvideo+bestaudio",
+            "--merge-output-format",
+            "mp4",
+            "-o",
+            media_filename,
+            youtube_url,
+        ]
+    else:
+        raise ValueError("Invalid media type specified")
 
-    command = [
-        "yt-dlp",
-        "--progress",
-        "-x",
-        "--audio-format",
-        "mp3",
-        "-o",
-        audio_filename,
-        youtube_url,
-    ]
+    # Apply trimming if necessary
+    if start_time != "00:00:00" or end_time != "00:00:00":
+        command.extend(
+            ["--postprocessor-args", f"ffmpeg:-ss {start_time} -to {end_time}"]
+        )
 
-    if postprocessor_args:
-        command.extend(["--postprocessor-args", " ".join(postprocessor_args)])
+    # Execute download command
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error downloading media: {e}")
+        raise
 
-    subprocess.run(command, check=True)
-
-    return audio_filename
+    return media_filename
 
 
-def process_audio_file(audio_filename, output_dir):
-    output_file_name = os.path.join(output_dir, "_02_trimmed_raw.mp3")
+def process_audio_file(audio_filename):
+    output_file_name = os.path.join("tmp", "_02_trimmed_raw.mp3")
 
     intro_audio_path = os.path.join(SCRIPT_DIR, "extras", "audio", "intro.wav")
     outro_audio_path = os.path.join(SCRIPT_DIR, "extras", "audio", "outro.wav")
@@ -279,10 +308,12 @@ def crossfade_videos(
             "[a]",
             "-c:a",
             audio_codec,
+            "-ar",
+            "44100",  # Ensure consistent audio sample rate
             "-b:a",
             audio_bitrate,
             "-r",
-            str(frame_rate),  # Explicitly set the frame rate for the output
+            str(frame_rate),
             output_path,
         ]
     )
@@ -333,7 +364,14 @@ def apply_video_compression(input_path, output_path):
     release = 50  # in ms
     makeup = 2  # in dB
 
-    filter_complex = f"[0:a]loudnorm,acompressor=threshold={compressor_threshold}dB:ratio={ratio}:knee={knee}:attack={attack}:release={release}:makeup={makeup}[a]"
+    # filter_complex = f"[0:a]loudnorm,acompressor=threshold={compressor_threshold}dB:ratio={ratio}:knee={knee}:attack={attack}:release={release}:makeup={makeup}[a]"
+
+    video_bitrate = "5000k"  # Example bitrate
+    audio_sample_rate = 48000  # in Hz
+    frame_rate = 30  # Example frame rate
+    resolution = "1920x1080"  # Example resolution
+
+    filter_complex = f"[0:v]fps=fps={frame_rate},scale={resolution},format=yuv420p[v];[0:a]loudnorm,acompressor=threshold={compressor_threshold}dB:ratio={ratio}:knee={knee}:attack={attack}:release={release}:makeup={makeup}[a]"
 
     subprocess.run(
         [
@@ -343,11 +381,17 @@ def apply_video_compression(input_path, output_path):
             "-filter_complex",
             filter_complex,
             "-map",
-            "0:v",
+            "[v]",
             "-map",
             "[a]",
             "-c:v",
-            "copy",
+            "libx264",
+            "-b:v",
+            video_bitrate,
+            "-r",
+            str(frame_rate),
+            "-ar",
+            str(audio_sample_rate),
             "-y",
             output_path,
         ],
@@ -395,3 +439,10 @@ def download_video(s3_url, local_path):
                 f.write(chunk)
 
     print(f"Video downloaded successfully to {local_path}")
+
+
+def check_and_download(video_url, file_path):
+    if not os.path.exists(file_path):
+        download_video(video_url, file_path)
+    else:
+        print(f"File {file_path} already exists. Skipping download.")

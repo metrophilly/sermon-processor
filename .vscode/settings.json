@@ -6,6 +6,8 @@
     "acrossfade",
     "anullsrc",
     "audacityteam",
+    "bestaudio",
+    "bestvideo",
     "compand",
     "crossfade",
     "crossfading",
@@ -14,6 +16,7 @@
     "libx",
     "loudnorm",
     "mdfind",
+    "udio",
     "xfade"
   ]
 }
