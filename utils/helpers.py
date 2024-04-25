@@ -1,6 +1,8 @@
 import re
 import os
 
+import requests
+
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 OUTPUT_BASE_DIR = os.path.join(SCRIPT_DIR, 'data')
@@ -66,7 +68,7 @@ def read_config_file(config_file_path):
     return config
 
 
-def parse_parameters(config):
+def parse_audio_parameters(config):
     """Parse and format parameters from the configuration dictionary."""
     try:
         youtube_url = config['url']
@@ -76,6 +78,17 @@ def parse_parameters(config):
         print(f"Missing necessary configuration parameter: {e}")
         exit(1)
     return youtube_url, start_time, end_time
+
+
+def parse_video_parameters(config):
+    """Parse and format parameters from the configuration dictionary."""
+    try:
+        intro_url = config['video_intro']
+        outro_url = config['video_outro']
+    except KeyError as e:
+        print(f"Missing necessary configuration parameter: {e}")
+        exit(1)
+    return intro_url, outro_url
 
 
 def confirm_parameters(youtube_url, start_time, end_time):
@@ -88,3 +101,20 @@ def confirm_parameters(youtube_url, start_time, end_time):
     if response.strip().lower() != 'y':
         print("Operation aborted by the user.")
         exit(0)
+
+
+def download_video(s3_url, local_path):
+    # Ensure the local directory exists
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    # Send a GET request to the S3 URL
+    response = requests.get(s3_url, stream=True)
+    response.raise_for_status()  # Raises stored HTTPError, if one occurred
+
+    # Stream the video content into the local file
+    with open(local_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+    
+    print(f"Video downloaded successfully to {local_path}")

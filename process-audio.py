@@ -11,7 +11,7 @@ from utils.helpers import (
     SCRIPT_DIR,
     OUTPUT_BASE_DIR,
     confirmation_printout,
-    parse_parameters,
+    parse_audio_parameters,
     read_config_file,
 )
 
@@ -163,7 +163,7 @@ def main():
     # parse preset params
     config_file_path = 'config/config.txt'
     config = read_config_file(config_file_path)
-    youtube_url, start_time, end_time = parse_parameters(config)
+    youtube_url, start_time, end_time = parse_audio_parameters(config)
 
     confirm_parameters(youtube_url, start_time, end_time)
 

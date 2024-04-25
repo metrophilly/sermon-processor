@@ -1,7 +1,10 @@
 import subprocess
 import os
 import json
+import sys
 from typing import TypedDict, Optional
+
+from utils.helpers import download_video, parse_video_parameters, read_config_file
 
 
 def run_command(command, capture_output=False):
@@ -54,6 +57,15 @@ def ensure_dir_exists(path: str):
     directory = os.path.join(".", path)
     os.makedirs(directory, exist_ok=True)
     return directory
+
+
+
+def ensure_file_exists(filename):
+    if not os.path.exists(filename):
+        print(f"Error: The file '{filename}' does not exist.")
+        sys.exit(1)
+    else:
+        print(f"The file '{filename}' exists.")
 
 
 def ensure_audio(video_path, base_settings):
@@ -319,10 +331,19 @@ class PathsDict(TypedDict, total=False):
 def main() -> None:
     ensure_dir_exists("tmp")
     ensure_dir_exists("output")
+    ensure_file_exists("config/base.mp4")
+
+    # parse preset params
+    config_file_path = 'config/config.txt'
+    config = read_config_file(config_file_path)
+    intro_url, outro_url = parse_video_parameters(config)
+
+    download_video(intro_url, './tmp/intro.mp4')
+    download_video(outro_url, './tmp/outro.mp4')
 
     paths: PathsDict = {
         "intro": {
-            "raw": "./extras/video/intro.mp4",
+            "raw": "./tmp/intro.mp4",
             "compressed": "./tmp/01-intro_compressed.mp4",
             "crossfaded": "./tmp/04-intro-base_crossfaded.mp4",
         },
@@ -332,7 +353,7 @@ def main() -> None:
             "crossfaded": "./tmp/05-base-output_crossfaded.mp4",
         },
         "outro": {
-            "raw": "./extras/video/outro.mp4",
+            "raw": "./tmp/outro.mp4",
             "compressed": "./tmp/03-outro_compressed.mp4",
         },
     }

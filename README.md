@@ -16,12 +16,20 @@ docker-compose --version
 
 ## Set config parameters
 
-The file `config.txt` allows for pre-filled url, start, and end time parameters.
-If you don't have it, run the following command to use the provided template.
+The file `config.txt` allows for pre-filled parameters. If you don't have it,
+run the following command to use the provided template.
 
 ```bash
 cp config/config.example.txt config/config.txt
 ```
+
+Ensure that you have the following params set to run the script:
+
+- For audio:
+  - url, start, and end time
+- For video:
+  - (for now) the 'base' video set to `config/base.mp4`
+  - the intro and outro urls should be consistent
 
 ## Build Docker Image
 
@@ -42,13 +50,19 @@ url and timestamp inputs.)
 docker-compose run sermon-processor
 ```
 
-Follow the prompts to input the YouTube URL and timestamps for audio processing.
+Follow the prompts to either run the `[a]udio` or `[v]ideo` scripts.
 
 ## Post-Processing
+
+#### Audio
 
 Once the automated processing is complete, the final audio file will be saved to
 `./data/` by default, or the specified data directory on your host machine.
 Afterwards, follow the manual steps that print in the console.
+
+#### Video
+
+The final video will be saved as `./data/FINAL_full-compressed.mp4` by default.
 
 ## Deactivating Docker Container
 
