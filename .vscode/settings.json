@@ -1,8 +1,22 @@
 {
   "cSpell.words": [
+    "abitrate",
+    "acodec",
     "acompressor",
+    "acrossfade",
+    "anullsrc",
     "audacityteam",
+    "bestaudio",
+    "bestvideo",
     "compand",
-    "mdfind"
+    "crossfade",
+    "crossfading",
+    "ffprobe",
+    "lavfi",
+    "libx",
+    "loudnorm",
+    "mdfind",
+    "udio",
+    "xfade"
   ]
 }

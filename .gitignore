@@ -1,5 +1,6 @@
 sermon-processor-env/
 __pycache__/
 data/
+tmp/
 
 config.txt
