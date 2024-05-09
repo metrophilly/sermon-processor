@@ -1,11 +1,12 @@
 import os
-from utils.config import parse_video_parameters, read_config_file
+import subprocess
+from utils.config import parse_video_parameters
 from utils.file import (
     create_and_change_directory,
     ensure_dir_exists,
-    ensure_file_exists,
     is_valid_file,
 )
+from utils.helpers import print_error, print_info, print_success
 from utils.media import (
     apply_video_compression,
     check_and_download,
@@ -19,17 +20,20 @@ from utils.ui import confirm_parameters
 
 
 def main() -> None:
+    print_info("Processing video...")
+
     ensure_dir_exists("tmp")
     ensure_dir_exists("data")
 
-    # parse preset params
-    config_file_path = "config.txt"
-    config = read_config_file(config_file_path)
-    youtube_url, start_time, end_time, intro_url, outro_url = parse_video_parameters(
-        config
-    )
+    youtube_url, start_time, end_time, intro_url, outro_url = parse_video_parameters()
 
-    confirm_parameters(youtube_url, start_time, end_time)
+    confirm_parameters(
+        {
+            "URL": youtube_url,
+            "Start": start_time,
+            "End": end_time,
+        }
+    )
 
     try:
         check_and_download(intro_url, "./tmp/intro.mp4")
@@ -48,7 +52,7 @@ def main() -> None:
                 "crossfaded": "./tmp/04-intro-base_crossfaded.mp4",
             },
             "base": {
-                "raw": f"./tmp/{upload_date}_base_downloaded_raw.mp4",
+                "raw": f"./tmp/base_downloaded_raw.mp4",
                 "compressed": "./tmp/02-base_compressed.mp4",
                 "crossfaded": "./tmp/05-base-output_crossfaded.mp4",
             },
@@ -88,12 +92,12 @@ def main() -> None:
             base_settings,
         )
 
-        print("Video processing complete.")
+        print_success("Video processing complete.")
 
     except ValueError as ve:
-        print(f"File validation error: {ve}")
+        print_error(f"File validation error: {ve}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print_error(f"An unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":

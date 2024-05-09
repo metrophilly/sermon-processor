@@ -2,11 +2,11 @@
 
 This is a small script to automate the downloading, processing, and scrubbing of
 Metro's weekly sermons from YouTube. This guide will walk you through setting up
-the sermon-processor project using Docker.
+`sermon-processor` project using Docker.
 
 ## Prerequisites
 
-Ensure you have `Docker` and `docker-compose` installed on your system. You can
+Ensure you have `docker` and `docker-compose` installed on your system. You can
 check if they're installed by running:
 
 ```bash
@@ -16,43 +16,44 @@ docker-compose --version
 
 ## Set config parameters
 
-The file `config.txt` allows for pre-filled parameters. If you don't have it,
-run the following command to use the provided template.
+The `.env` file allows for pre-filled parameters. If you don't have it, run the
+following command to use the provided template. Please reference the Bitwarden
+Vault for keys
 
 ```bash
-cp config.example.txt config.txt
+cp .env.example .env
 ```
 
-Ensure that you have the `url, start, and end` params set to run the script.
+Ensure that you have the `url`, `start`, and `end` params set to run the script.
 
-- For video, the intro and outro urls should be the same as the ones in the
-  `config.example.txt`.
-
-## Build Docker Image
-
-Docker-compose simplifies the setup process by containerizing the environment
-and dependencies. Follow these steps to build the docker image.
-
-```bash
-docker-compose build
-```
+- For video and description generation, you will also need the sermon `title`,
+  `preacher`, `passage`, and `series`
+- (_Note: For the `passage`, ensure that it is in the strictly in format of
+  "Book #:#-#, (eg: "1 John 1:1-2"), with no spaces around the colon `:`._)
 
 ## Run the script
 
-Now run the `sermon-processor` image we just built. (Usually we could run `up`,
-but we need to use `run` because we need to interact with the script to add the
-url and timestamp inputs.)
+You can find the startup script in the `/bin` directory. Run the following to
+start:
 
 ```bash
-docker-compose run sermon-processor
+sh bin/start.sh
 ```
 
-Follow the prompts to either run the `[a]udio` or `[v]ideo` scripts.
+Follow the prompts to either run the `[a]udio`, `[v]ideo` scripts, or to only
+run the description generation, `[d]escription`.
+
+- If you're having trouble running the script, make sure the file has the
+  correct executable permissions by running:
+
+  ```bash
+  chmod +x bin/start.sh
+  ```
 
 ## Post-Processing
 
 Once the automated processing is complete, the final media file will be saved to
-`./data/` by default, or the specified data directory on your host machine.
+`data/` by default, or the specified data directory on your host machine.
 Afterwards, follow the manual steps that print in the console.
 
 ## Deactivating Docker Container

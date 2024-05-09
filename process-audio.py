@@ -1,5 +1,6 @@
-from utils.config import parse_audio_parameters, read_config_file
+from utils.config import parse_audio_parameters
 from utils.file import create_and_change_directory, is_valid_file
+from utils.helpers import print_error, print_info
 from utils.media import (
     apply_audio_compression,
     download_media_from_youtube,
@@ -10,13 +11,17 @@ from utils.ui import confirm_parameters, confirmation_printout
 
 
 def main():
+    print_info("Processing audio...")
 
-    # parse preset params
-    config_file_path = "config.txt"
-    config = read_config_file(config_file_path)
-    youtube_url, start_time, end_time = parse_audio_parameters(config)
+    youtube_url, start_time, end_time = parse_audio_parameters()
 
-    confirm_parameters(youtube_url, start_time, end_time)
+    confirm_parameters(
+        {
+            "URL": youtube_url,
+            "Start": start_time,
+            "End": end_time,
+        }
+    )
 
     try:
         upload_date = get_video_upload_date(youtube_url)
@@ -35,13 +40,13 @@ def main():
         apply_audio_compression(processed_file_name, upload_date, output_dir)
         # transcribe_audio(processed_file_name, upload_date, output_dir)
 
-        # final printouts
-        confirmation_printout(output_dir)
+        # final printout
+        confirmation_printout(upload_date)
 
     except ValueError as ve:
-        print(f"File validation error: {ve}")
+        print_error(f"File validation error: {ve}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print_error(f"An unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":
