@@ -1,47 +1,47 @@
+import os
+from dotenv import load_dotenv  # type: ignore
+from utils.helpers import print_error
 from utils.time import get_formatted_time
 
+load_dotenv()
 
-def read_config_file(config_file_path):
-    """Read configuration from a file and return a dictionary of parameters."""
-    config = {}
+
+def parse_audio_parameters():
+    """Parse and format parameters from the env file."""
     try:
-        with open(config_file_path, "r") as file:
-            for line in file:
-                key, value = line.strip().split("=", 1)
-                config[key.strip().lower()] = value.strip()
-    except FileNotFoundError:
-        print(f"Configuration file not found: {config_file_path}")
-        print(
-            f"Please run `cp config.example.txt config.txt` and adjust the config parameters"
-        )
-        exit(1)
-    except ValueError:
-        print("Configuration file format error, should be 'key=value'")
-        exit(1)
-    return config
-
-
-def parse_audio_parameters(config):
-    """Parse and format parameters from the configuration dictionary."""
-    try:
-        youtube_url = config["url"]
-        start_time = get_formatted_time(config["start"])
-        end_time = get_formatted_time(config["end"])
+        youtube_url = os.getenv("URL")
+        start_time = get_formatted_time(os.getenv("START"))
+        end_time = get_formatted_time(os.getenv("END"))
     except KeyError as e:
-        print(f"Missing necessary configuration parameter: {e}")
+        print_error(f"Missing necessary env parameter: {e}")
         exit(1)
     return youtube_url, start_time, end_time
 
 
-def parse_video_parameters(config):
-    """Parse and format parameters from the configuration dictionary."""
+def parse_video_parameters():
+    """Parse and format parameters from the env file."""
     try:
-        youtube_url = config["url"]
-        start_time = get_formatted_time(config["start"])
-        end_time = get_formatted_time(config["end"])
-        intro_url = config["video_intro"]
-        outro_url = config["video_outro"]
+        youtube_url = os.getenv("URL")
+        start_time = get_formatted_time(os.getenv("START"))
+        end_time = get_formatted_time(os.getenv("END"))
+        intro_url = os.getenv("VIDEO_INTRO")
+        outro_url = os.getenv("VIDEO_OUTRO")
     except KeyError as e:
-        print(f"Missing necessary configuration parameter: {e}")
+        print_error(f"Missing necessary env parameter: {e}")
         exit(1)
     return youtube_url, start_time, end_time, intro_url, outro_url
+
+
+def parse_video_description_parameters():
+    """Parse and format parameters from the configuration dictionary."""
+    try:
+        youtube_url = os.getenv("URL")
+        title = os.getenv("SERMON_TITLE")
+        preacher = os.getenv("PREACHER")
+        passage = os.getenv("PASSAGE")
+        series = os.getenv("SERIES")
+
+    except KeyError as e:
+        print_error(f"Missing necessary env parameter: {e}")
+        exit(1)
+    return youtube_url, title, preacher, passage, series
