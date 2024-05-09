@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 
 
@@ -10,3 +11,13 @@ def is_valid_time(time_str):
 
 def get_formatted_time(time_input):
     return time_input if time_input else "00:00:00"
+
+
+def get_formatted_date(input_date):
+    # Parse the input date string
+    date_obj = datetime.strptime(input_date, "%Y-%m-%d")
+
+    # Format the date as "Sunday, October 29, 2023"
+    formatted_date = date_obj.strftime("%A, %B %d, %Y")
+
+    return formatted_date

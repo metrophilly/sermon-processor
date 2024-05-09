@@ -25,3 +25,18 @@ def run_command(command, capture_output=False):
         )
     print("Command executed successfully.")
     return output if capture_output else None
+
+
+# Function to print error messages in red
+def print_error(message):
+    print("\033[91m{}\033[0m".format(message))
+
+
+# Function to print success messages in green
+def print_success(message):
+    print("\033[92m{}\033[0m".format(message))
+
+
+# Function to print info messages in orange
+def print_info(message):
+    print("\033[93m{}\033[0m".format(message))
