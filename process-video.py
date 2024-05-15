@@ -42,7 +42,7 @@ def main() -> None:
         upload_date = get_video_upload_date(youtube_url)
         output_dir = create_and_change_directory(upload_date)
         downloaded_video_file = download_media_from_youtube(
-            youtube_url, start_time, end_time, upload_date, "video"
+            youtube_url, start_time, end_time, "video"
         )
 
         paths: PathsDict = {

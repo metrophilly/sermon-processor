@@ -27,7 +27,7 @@ def main():
         upload_date = get_video_upload_date(youtube_url)
         output_dir = create_and_change_directory(upload_date)
         downloaded_audio_file = download_media_from_youtube(
-            youtube_url, start_time, end_time, upload_date, "audio"
+            youtube_url, start_time, end_time, "audio"
         )
 
         if not is_valid_file(downloaded_audio_file):
