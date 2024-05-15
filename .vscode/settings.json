@@ -8,15 +8,22 @@
     "audacityteam",
     "bestaudio",
     "bestvideo",
+    "Bitwarden",
     "compand",
     "crossfade",
     "crossfading",
+    "dotenv",
+    "escription",
     "ffprobe",
+    "httpx",
     "lavfi",
     "libx",
     "loudnorm",
+    "lxml",
     "mdfind",
+    "studylight",
     "udio",
+    "versetxt",
     "xfade"
   ]
 }

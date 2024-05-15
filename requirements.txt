@@ -11,6 +11,9 @@ proglog==0.1.10
 requests==2.31.0
 tqdm==4.66.1
 urllib3==2.1.0
-yt-dlp==2023.12.30
+yt-dlp==2024.4.9
+lxml==4.9.1
+python-dotenv==1.0.1
+httpx==0.27.0
 # Add Whisper from GitHub
 git+https://github.com/openai/whisper.git

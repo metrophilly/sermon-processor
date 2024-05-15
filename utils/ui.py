@@ -1,3 +1,6 @@
+from utils.helpers import print_error, print_info
+
+
 def confirmation_printout(upload_date):
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
@@ -9,7 +12,7 @@ def confirmation_printout(upload_date):
     🎛️ SERMON PROCESSOR
     ===================
 
-    Your file has been processed and saved to {YELLOW}./data/{upload_date}_ready_to_scrub.mp3{GREEN}.
+    Your file has been processed and saved to {YELLOW}./data/{upload_date}/{upload_date}_ready_to_scrub.mp3{GREEN}.
 
     Please follow the manual finishing touches:
 
@@ -28,13 +31,32 @@ def confirmation_printout(upload_date):
     )
 
 
-def confirm_parameters(youtube_url, start_time, end_time):
-    """Ask the user to confirm the parameters before proceeding."""
-    print("Please confirm if these are the correct parameters:")
-    print(f"URL: {youtube_url}")
-    print(f"Start Time: {start_time}")
-    print(f"End Time: {end_time}")
-    response = input("Continue with these parameters? [y/N]: ")
+def confirm_parameters(parameters: dict):
+    """
+    Ask the user to confirm the parameters before proceeding.
+
+    Args:
+        parameters (dict): A dictionary of parameter names and their values to confirm.
+
+    Example:
+    parameters = {
+        "URL": "http://youtube.com/watch?v=dQw4w9WgXcQ",
+        "Start Time": "00:00:10",
+        "End Time": "00:01:00",
+        "Preacher": "John Doe",
+        "Series": "Understanding Faith"
+    }
+
+
+    Exits the script if the user does not confirm.
+    """
+    print_info("Please confirm if these are the correct parameters:")
+    for key, value in parameters.items():
+        print_info(f"{key}: {value}")
+
+    response = input(
+        "\033[93m{}\033[0m".format("Continue with these parameters? [y/N]: ")
+    )
     if response.strip().lower() != "y":
-        print("Operation aborted by the user.")
+        print_error("Operation aborted by the user.")
         exit(0)

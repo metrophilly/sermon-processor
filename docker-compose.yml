@@ -1,11 +1,14 @@
 version: "3.8"
 services:
   sermon-processor:
-    build: .
-    image: sermon-processor
+    image: sermon-processor:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ./data:/usr/src/app/data
       - ./tmp:/usr/src/app/tmp
-    command: python3 ./startup.py
+    env_file:
+      - .env
     stdin_open: true
     tty: true
