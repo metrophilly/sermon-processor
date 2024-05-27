@@ -52,13 +52,16 @@ run the description generation, `[d]escription`.
 
 ## Post-Processing
 
+To ensure the correct media file is generated each week, it is essential to delete the `tmp` directory after the current media file has been successfully created. If the `tmp` directory is not deleted, next week’s media file will use the previous week’s data instead of generating a new file.
+
+Delete the `tmp` directory by either:
+- Manually deleting the folder
+- Running the command `rm -r tmp` in your terminal
+
+
 Once the automated processing is complete, the final media file will be saved to
 `data/` by default, or the specified data directory on your host machine.
 Afterwards, follow the manual steps that print in the console.
-
-Delete the `tmp` folder by either:
-- Manually deleting the folder
-- Running the command `rm -r tmp`
 
 ## Deactivating Docker Container
 
