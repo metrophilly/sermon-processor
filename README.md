@@ -56,6 +56,10 @@ Once the automated processing is complete, the final media file will be saved to
 `data/` by default, or the specified data directory on your host machine.
 Afterwards, follow the manual steps that print in the console.
 
+Delete the `tmp` folder by either:
+- Manually deleting the folder
+- Running the command `rm -r tmp`
+
 ## Deactivating Docker Container
 
 When you're done, the Docker container will automatically stop as we've used the
