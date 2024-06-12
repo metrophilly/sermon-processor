@@ -10,6 +10,7 @@ from utils.file import (
 )
 from utils.helpers import print_error, print_info, print_success
 from utils.media import (
+    apply_video_compression,
     check_and_download,
     crossfade_videos_with_pymovie,
     download_media_from_youtube,
@@ -62,11 +63,16 @@ def main() -> None:
 
         downloading_perfcounter = time.perf_counter()
 
+        downloaded_video_compressed = "./tmp/base_compressed.mp4"
+        apply_video_compression(downloaded_video_file, downloaded_video_compressed)
+
+        compression_perfcounter = time.perf_counter()
+
         # stitch the clips together
         crossfade_videos_with_pymovie(
             [
                 intro_clip_path,
-                downloaded_video_file,
+                downloaded_video_compressed,
                 outro_clip_path,
             ],
             2,
@@ -83,7 +89,10 @@ def main() -> None:
             f"Downloading took  : {format_seconds_to_readable(downloading_perfcounter - start_perfcounter)} seconds."
         )
         print_success(
-            f"Crossfading took  : {format_seconds_to_readable(crossfade_perfcounter - downloading_perfcounter)} seconds."
+            f"Compressing took  : {format_seconds_to_readable(compression_perfcounter - downloading_perfcounter)} seconds."
+        )
+        print_success(
+            f"Crossfading took  : {format_seconds_to_readable(crossfade_perfcounter - compression_perfcounter)} seconds."
         )
         print_success(
             f"Total process took: {format_seconds_to_readable(end_perfcounter - start_perfcounter)}."
