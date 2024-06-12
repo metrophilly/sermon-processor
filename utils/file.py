@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from utils.constants import OUTPUT_BASE_DIR
 
@@ -10,6 +11,16 @@ def is_valid_file(file_path):
 def ensure_dir_exists(path: str):
     directory = os.path.join(".", path)
     os.makedirs(directory, exist_ok=True)
+    return directory
+
+
+def delete_dir(path: str):
+    directory = os.path.join(".", path)
+    try:
+        shutil.rmtree(directory)
+        print(f"Directory '{directory}' has been deleted.")
+    except OSError as e:
+        print(f"Error deleting filepath {path}: {e.strerror} - {e.filename}")
     return directory
 
 

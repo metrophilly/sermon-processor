@@ -1,13 +1,7 @@
-from typing import Optional, TypedDict
-
-
-class VideoPaths(TypedDict):
-    raw: str
-    compressed: str
-    crossfaded: Optional[str]
+from typing import TypedDict
 
 
 class PathsDict(TypedDict, total=False):
-    intro: VideoPaths
-    base: VideoPaths
-    outro: VideoPaths
+    intro: str
+    base: str
+    outro: str

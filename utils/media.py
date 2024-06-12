@@ -3,11 +3,18 @@ import json
 import subprocess
 import requests
 import os
-from moviepy.editor import AudioFileClip, concatenate_audioclips, AudioClip
+from moviepy.editor import (
+    AudioFileClip,
+    concatenate_audioclips,
+    AudioClip,
+    VideoFileClip,
+    CompositeVideoClip,
+    afx,
+)
 from typing import Literal
 
 from utils.file import ensure_dir_exists
-from utils.helpers import run_command
+from utils.helpers import print_info, run_command
 from utils.time import is_valid_time
 from utils.constants import SCRIPT_DIR
 
@@ -340,6 +347,40 @@ def crossfade_videos(
     )
 
 
+def crossfade_videos_with_pymovie(video_paths, crossfade_duration, output_path):
+    # Ensure there are at least two videos to crossfade
+    if len(video_paths) < 2:
+        raise ValueError("At least two video paths are required for crossfading.")
+
+    # Initialize list to hold video clips with their start times
+    clips = []
+    total_duration = 0  # Keep track of the total duration after each clip is added
+
+    # Load video clips and set their start times
+    for i, path in enumerate(video_paths):
+        clip = VideoFileClip(path)
+        # If it's not the first clip, set it to start where the last one starts to fade out
+        if i > 0:
+            start_time = max(0, total_duration - crossfade_duration)
+            clip = clip.set_start(start_time).crossfadein(crossfade_duration)
+        else:
+            # First clip starts at 0
+            clip = clip.set_start(0)
+
+        # Normalize the audio of each clip
+        clip = clip.fx(afx.audio_normalize)
+
+        clips.append(clip)
+        # Update total_duration to the end of the current clip, not including the crossfade
+        total_duration += clip.duration - crossfade_duration if i > 0 else clip.duration
+
+    # Create the crossfade clip by overlaying the clips
+    final_clip = CompositeVideoClip(clips, size=clips[0].size)
+
+    # Write the output video file with crossfade
+    final_clip.write_videofile(output_path)
+
+
 def trim_base_video(video_path, segment_duration, base_settings):
     tmp_dir = ensure_dir_exists("tmp")
 
@@ -464,6 +505,7 @@ def download_video(s3_url, local_path):
 
 def check_and_download(video_url, file_path):
     if not os.path.exists(file_path):
+        print_info(f"File {file_path} doesn't exist, downloading...")
         download_video(video_url, file_path)
     else:
         print(f"File {file_path} already exists. Skipping download.")

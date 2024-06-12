@@ -11,9 +11,11 @@
     "Bitwarden",
     "compand",
     "crossfade",
+    "crossfadein",
     "crossfading",
     "dotenv",
     "escription",
+    "fadein",
     "ffprobe",
     "httpx",
     "lavfi",
@@ -21,9 +23,14 @@
     "loudnorm",
     "lxml",
     "mdfind",
+    "perfcounter",
+    "strerror",
     "studylight",
+    "subclip",
     "udio",
     "versetxt",
+    "videoclips",
+    "videofile",
     "xfade"
   ]
 }
