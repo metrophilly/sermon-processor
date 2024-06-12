@@ -94,46 +94,31 @@ def download_media_from_youtube(
     if not is_valid_time(start_time) or not is_valid_time(end_time):
         raise ValueError("Invalid time format")
 
-    # Define filename based on media type
     media_filename = os.path.join(
         "tmp",
         f"base_downloaded_raw.{'mp3' if media_type == 'audio' else 'mp4'}",
     )
 
-    # Configuring command for different media types
-    if media_type == "audio":
-        command = [
-            "yt-dlp",
-            "--progress",
-            "-x",
-            "--audio-format",
-            "mp3",
-            "-o",
-            media_filename,
-            youtube_url,
-        ]
-    elif media_type == "video":
-        command = [
-            "yt-dlp",
-            "--progress",
-            "--format",
-            "bestvideo+bestaudio",
-            "--merge-output-format",
-            "mp4",
-            "-o",
-            media_filename,
-            youtube_url,
-        ]
-    else:
-        raise ValueError("Invalid media type specified")
+    command = [
+        "yt-dlp",
+        "--progress",
+        "-o",
+        media_filename,
+        "--format",
+        "bestaudio" if media_type == "audio" else "bestvideo+bestaudio",
+        "--merge-output-format",
+        "mp4" if media_type == "video" else "mp3",
+        youtube_url,
+    ]
 
-    # Apply trimming if necessary
     if start_time != "00:00:00" or end_time != "00:00:00":
-        command.extend(
-            ["--postprocessor-args", f"ffmpeg:-ss {start_time} -to {end_time}"]
+        postprocessor_args = (
+            f"ffmpeg:-ss {start_time} -to {end_time} -avoid_negative_ts make_zero"
         )
+        if media_type == "video":
+            postprocessor_args += " -c:v libx264 -c:a aac"  # Re-encoding for video
+        command.extend(["--postprocessor-args", postprocessor_args])
 
-    # Execute download command
     try:
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as e:
@@ -356,7 +341,9 @@ def crossfade_videos_with_pymovie(video_paths, crossfade_duration, output_path):
     final_clip = CompositeVideoClip(clips, size=clips[0].size)
 
     # Write the output video file with crossfade
-    final_clip.write_videofile(output_path)
+    final_clip.write_videofile(
+        output_path, codec="libx264", audio_codec="aac", audio_fps=48000
+    )
 
 
 def trim_base_video(video_path, segment_duration, base_settings):
