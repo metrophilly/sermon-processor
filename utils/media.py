@@ -10,6 +10,7 @@ from moviepy.editor import (
     VideoFileClip,
     CompositeVideoClip,
     afx,
+    vfx,
 )
 from typing import Literal
 
@@ -358,11 +359,7 @@ def crossfade_videos_with_pymovie(video_paths, crossfade_duration, output_path):
             start_time = max(0, total_duration - crossfade_duration)
             clip = clip.set_start(start_time).crossfadein(crossfade_duration)
         else:
-            # First clip starts at 0
             clip = clip.set_start(0)
-
-        # Normalize the audio of each clip
-        clip = clip.fx(afx.audio_normalize)
 
         clips.append(clip)
         # Update total_duration to the end of the current clip, not including the crossfade
@@ -373,7 +370,11 @@ def crossfade_videos_with_pymovie(video_paths, crossfade_duration, output_path):
 
     # Write the output video file with crossfade
     final_clip.write_videofile(
-        output_path, codec="libx264", audio_codec="aac", audio_fps=48000
+        output_path,
+        codec="libx264",
+        audio_codec="aac",
+        audio_fps=48000,
+        threads=8,
     )
 
 
