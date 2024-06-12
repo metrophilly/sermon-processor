@@ -69,7 +69,7 @@ def main() -> None:
                 downloaded_video_file,
                 outro_clip_path,
             ],
-            1,
+            2,
             final_path,
         )
         crossfade_perfcounter = time.perf_counter()
@@ -86,15 +86,13 @@ def main() -> None:
             f"Crossfading took  : {format_seconds_to_readable(crossfade_perfcounter - downloading_perfcounter)} seconds."
         )
         print_success(
-            f"Total process took: {format_seconds_to_readable(end_perfcounter - start_perfcounter)} seconds."
+            f"Total process took: {format_seconds_to_readable(end_perfcounter - start_perfcounter)}."
         )
 
     except ValueError as ve:
         print_error(f"File validation error: {ve}")
     except Exception as e:
         print_error(f"An unexpected error occurred: {e}")
-    finally:
-        delete_dir("tmp")
 
 
 if __name__ == "__main__":
