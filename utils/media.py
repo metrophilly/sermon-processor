@@ -90,6 +90,7 @@ def download_media_from_youtube(
     youtube_url: str,
     start_time: str,
     end_time: str,
+    upload_date: str,
     media_type: Literal["audio", "video"] = "audio",
 ) -> str:
     if not is_valid_time(start_time) or not is_valid_time(end_time):
@@ -97,7 +98,7 @@ def download_media_from_youtube(
 
     media_filename = os.path.join(
         "tmp",
-        f"base_downloaded_raw.{'mp3' if media_type == 'audio' else 'mp4'}",
+        f"{upload_date}_base_downloaded_raw.{'mp3' if media_type == 'audio' else 'mp4'}",
     )
 
     command = [
