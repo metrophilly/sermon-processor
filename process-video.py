@@ -53,7 +53,7 @@ def main() -> None:
         check_and_download(intro_url, intro_clip_path)
         check_and_download(outro_url, outro_clip_path)
         downloaded_video_file = download_media_from_youtube(
-            youtube_url, start_time, end_time, "video"
+            youtube_url, start_time, end_time, upload_date, "video"
         )
 
         if not is_valid_file(downloaded_video_file):
@@ -63,7 +63,7 @@ def main() -> None:
 
         downloading_perfcounter = time.perf_counter()
 
-        downloaded_video_compressed = "./tmp/base_compressed.mp4"
+        downloaded_video_compressed = f"./tmp/{upload_date}_base_compressed.mp4"
         apply_video_compression(downloaded_video_file, downloaded_video_compressed)
 
         compression_perfcounter = time.perf_counter()
