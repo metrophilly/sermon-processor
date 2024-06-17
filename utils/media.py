@@ -96,9 +96,9 @@ def download_media_from_youtube(
     if not is_valid_time(start_time) or not is_valid_time(end_time):
         raise ValueError("Invalid time format")
 
+    file_extension = "mp3" if media_type == "audio" else "mp4"
     media_filename = os.path.join(
-        "tmp",
-        f"{upload_date}_base_downloaded_raw.{'mp3' if media_type == 'audio' else 'mp4'}",
+        "tmp", f"{upload_date}_base_downloaded_raw.{file_extension}"
     )
 
     command = [
@@ -108,10 +108,13 @@ def download_media_from_youtube(
         media_filename,
         "--format",
         "bestaudio" if media_type == "audio" else "bestvideo+bestaudio",
-        "--merge-output-format",
-        "mp4" if media_type == "video" else "mp3",
-        youtube_url,
     ]
+
+    if media_type == "audio":
+        command.extend(["-x", "--audio-format", "mp3"])
+    elif media_type == "video":
+        command.append("--merge-output-format")
+        command.append("mp4")
 
     if start_time != "00:00:00" or end_time != "00:00:00":
         postprocessor_args = (
@@ -120,6 +123,8 @@ def download_media_from_youtube(
         if media_type == "video":
             postprocessor_args += " -c:v libx264 -c:a aac"  # Re-encoding for video
         command.extend(["--postprocessor-args", postprocessor_args])
+
+    command.append(youtube_url)
 
     try:
         subprocess.run(command, check=True)
