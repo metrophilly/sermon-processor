@@ -21,3 +21,10 @@ def get_formatted_date(input_date):
     formatted_date = date_obj.strftime("%A, %B %d, %Y")
 
     return formatted_date
+
+
+def format_seconds_to_readable(seconds):
+    """Converts a number of seconds to a formatted string showing hours, minutes, and seconds."""
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{int(hours)} hours, {int(minutes)} minutes, {seconds:.2f} seconds"

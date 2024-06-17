@@ -1,8 +1,10 @@
 import os
-import subprocess
+import time
 from utils.config import parse_video_parameters
+from utils.constants import OUTPUT_BASE_DIR
 from utils.file import (
     create_and_change_directory,
+    delete_dir,
     ensure_dir_exists,
     is_valid_file,
 )
@@ -10,16 +12,17 @@ from utils.helpers import print_error, print_info, print_success
 from utils.media import (
     apply_video_compression,
     check_and_download,
-    crossfade_videos,
+    crossfade_videos_with_pymovie,
     download_media_from_youtube,
-    get_video_settings,
     get_video_upload_date,
 )
-from utils.types import PathsDict
+from utils.time import format_seconds_to_readable
 from utils.ui import confirm_parameters
 
 
 def main() -> None:
+    warmup_perfcounter = time.perf_counter()
+
     print_info("Processing video...")
 
     ensure_dir_exists("tmp")
@@ -36,63 +39,64 @@ def main() -> None:
     )
 
     try:
-        check_and_download(intro_url, "./tmp/intro.mp4")
-        check_and_download(outro_url, "./tmp/outro.mp4")
+        start_perfcounter = time.perf_counter()
 
+        # set the config vars and paths
         upload_date = get_video_upload_date(youtube_url)
         output_dir = create_and_change_directory(upload_date)
-        downloaded_video_file = download_media_from_youtube(
-            youtube_url, start_time, end_time, "video"
-        )
 
-        paths: PathsDict = {
-            "intro": {
-                "raw": "./tmp/intro.mp4",
-                "compressed": "./tmp/01-intro_compressed.mp4",
-                "crossfaded": "./tmp/04-intro-base_crossfaded.mp4",
-            },
-            "base": {
-                "raw": f"./tmp/base_downloaded_raw.mp4",
-                "compressed": "./tmp/02-base_compressed.mp4",
-                "crossfaded": "./tmp/05-base-output_crossfaded.mp4",
-            },
-            "outro": {
-                "raw": "./tmp/outro.mp4",
-                "compressed": "./tmp/03-outro_compressed.mp4",
-            },
-        }
+        intro_clip_path = os.path.join(OUTPUT_BASE_DIR, "intro.mp4")
+        outro_clip_path = os.path.join(OUTPUT_BASE_DIR, "outro.mp4")
         final_path = os.path.join(output_dir, f"{upload_date}_final.mp4")
+
+        # download the video clips
+        check_and_download(intro_url, intro_clip_path)
+        check_and_download(outro_url, outro_clip_path)
+        downloaded_video_file = download_media_from_youtube(
+            youtube_url, start_time, end_time, upload_date, "video"
+        )
 
         if not is_valid_file(downloaded_video_file):
             raise ValueError(
                 f"The file {downloaded_video_file} was not created or is too small. Please check for errors."
             )
 
-        # apply "standard loudness" to all clips individually
-        for key in paths.keys():
-            apply_video_compression(paths[key]["raw"], paths[key]["compressed"])
+        downloading_perfcounter = time.perf_counter()
 
-        base_settings = get_video_settings(paths["base"]["compressed"])
+        downloaded_video_compressed = f"./tmp/{upload_date}_base_compressed.mp4"
+        apply_video_compression(downloaded_video_file, downloaded_video_compressed)
 
-        # crossfade the intro to base
-        crossfade_videos(
-            paths["intro"]["compressed"],
-            paths["base"]["compressed"],
-            1,
-            paths["intro"]["crossfaded"],
-            base_settings,
-        )
+        compression_perfcounter = time.perf_counter()
 
-        # crossfade the intro/base result to outro
-        crossfade_videos(
-            paths["intro"]["crossfaded"],
-            paths["outro"]["compressed"],
-            1,
+        # stitch the clips together
+        crossfade_videos_with_pymovie(
+            [
+                intro_clip_path,
+                downloaded_video_compressed,
+                outro_clip_path,
+            ],
+            2,
             final_path,
-            base_settings,
         )
+        crossfade_perfcounter = time.perf_counter()
 
         print_success("Video processing complete.")
+
+        end_perfcounter = time.perf_counter()
+
+        # print the performance timing
+        print_success(
+            f"Downloading took  : {format_seconds_to_readable(downloading_perfcounter - start_perfcounter)} seconds."
+        )
+        print_success(
+            f"Compressing took  : {format_seconds_to_readable(compression_perfcounter - downloading_perfcounter)} seconds."
+        )
+        print_success(
+            f"Crossfading took  : {format_seconds_to_readable(crossfade_perfcounter - compression_perfcounter)} seconds."
+        )
+        print_success(
+            f"Total process took: {format_seconds_to_readable(end_perfcounter - start_perfcounter)}."
+        )
 
     except ValueError as ve:
         print_error(f"File validation error: {ve}")
