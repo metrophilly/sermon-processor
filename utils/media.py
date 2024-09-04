@@ -95,7 +95,7 @@ def download_media_from_youtube(
 
     # Configuring command for different media types
     if media_type == "audio":
-        command = [
+        download_command = [
             "yt-dlp",
             "--progress",
             "-x",
@@ -106,7 +106,7 @@ def download_media_from_youtube(
             youtube_url,
         ]
     elif media_type == "video":
-        command = [
+        download_command = [
             "yt-dlp",
             "--progress",
             "--format",
@@ -117,21 +117,43 @@ def download_media_from_youtube(
             media_filename,
             youtube_url,
         ]
-    else:
-        raise ValueError("Invalid media type specified")
 
-    # Apply trimming if necessary
-    if start_time != "00:00:00" or end_time != "00:00:00":
-        command.extend(
-            ["--postprocessor-args", f"ffmpeg:-ss {start_time} -to {end_time}"]
-        )
-
-    # Execute download command
     try:
-        subprocess.run(command, check=True)
+        subprocess.run(download_command, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error downloading media: {e}")
         raise
+
+    # Apply trimming if necessary
+    if start_time != "00:00:00" or end_time != "00:00:00":
+        trimmed_filename = os.path.join(
+            "tmp",
+            f"base_downloaded_trimmed.{'mp3' if media_type == 'audio' else 'mp4'}",
+        )
+
+        trim_command = [
+            "ffmpeg",
+            "-i",
+            media_filename,  # Input file
+            "-ss",
+            start_time,  # Start time
+            "-to",
+            end_time,  # End time
+            "-c",
+            "copy",  # Copy codecs to avoid re-encoding
+            trimmed_filename,  # Output file
+        ]
+
+        try:
+            subprocess.run(trim_command, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error trimming media: {e}")
+            raise
+
+        # Optionally remove the original untrimmed file if trimming was successful
+        if os.path.exists(trimmed_filename):
+            os.remove(media_filename)
+            media_filename = trimmed_filename
 
     return media_filename
 
