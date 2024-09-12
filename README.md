@@ -33,8 +33,10 @@ Ensure that you have the `url`, `start`, and `end` params set to run the script.
 
 ## Run the script
 
-You can find the startup script in the `/bin` directory. Run the following to
-start:
+1. Ensure that you have Docker Desktop running in the background.
+
+2. Then run the startup script in the `/bin` directory. Run the following to
+   start:
 
 ```bash
 sh bin/start.sh
@@ -52,12 +54,15 @@ run the description generation, `[d]escription`.
 
 ## Post-Processing
 
-To ensure the correct media file is generated each week, it is essential to delete the `tmp` directory after the current media file has been successfully created. If the `tmp` directory is not deleted, next week’s media file will use the previous week’s data instead of generating a new file.
+To ensure the correct media file is generated each week, it is essential to
+delete the `tmp` directory after the current media file has been successfully
+created. If the `tmp` directory is not deleted, next week’s media file will use
+the previous week’s data instead of generating a new file.
 
 Delete the `tmp` directory by either:
+
 - Manually deleting the folder
 - Running the command `rm -r tmp` in your terminal
-
 
 Once the automated processing is complete, the final media file will be saved to
 `data/` by default, or the specified data directory on your host machine.
