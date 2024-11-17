@@ -1,8 +1,8 @@
 # 🎛️ Metro Sermons Processor
 
 This is a small script to automate the downloading, processing, and scrubbing of
-Metro's weekly sermons from YouTube. This guide will walk you through setting up
-`sermon-processor` project using Docker.
+Metro's weekly sermons from YouTube and audio of Spotify. This guide will walk
+you through setting up `sermon-processor` project using Docker.
 
 ## Prerequisites
 
@@ -26,11 +26,6 @@ cp .env.example .env
 
 Ensure that you have the `url`, `start`, and `end` params set to run the script.
 
-- For video and description generation, you will also need the sermon `title`,
-  `preacher`, `passage`, and `series`
-- (_Note: For the `passage`, ensure that it is in the strictly in format of
-  "Book #:#-#, (eg: "1 John 1:1-2"), with no spaces around the colon `:`._)
-
 ## Run the script
 
 1. Ensure that you have Docker Desktop running in the background.
@@ -42,8 +37,7 @@ Ensure that you have the `url`, `start`, and `end` params set to run the script.
 sh bin/start.sh
 ```
 
-Follow the prompts to either run the `[a]udio`, `[v]ideo` scripts, or to only
-run the description generation, `[d]escription`.
+Follow the prompts to either run the `[a]udio` or `[v]ideo` scripts.
 
 - If you're having trouble running the script, make sure the file has the
   correct executable permissions by running:

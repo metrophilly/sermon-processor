@@ -30,18 +30,3 @@ def parse_video_parameters():
         print_error(f"Missing necessary env parameter: {e}")
         exit(1)
     return youtube_url, start_time, end_time, intro_url, outro_url
-
-
-def parse_video_description_parameters():
-    """Parse and format parameters from the configuration dictionary."""
-    try:
-        youtube_url = os.getenv("URL")
-        title = os.getenv("SERMON_TITLE")
-        preacher = os.getenv("PREACHER")
-        passage = os.getenv("PASSAGE")
-        series = os.getenv("SERIES")
-
-    except KeyError as e:
-        print_error(f"Missing necessary env parameter: {e}")
-        exit(1)
-    return youtube_url, title, preacher, passage, series
