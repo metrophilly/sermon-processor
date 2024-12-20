@@ -12,3 +12,13 @@ services:
       - .env
     stdin_open: true
     tty: true
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    volumes:
+      - ./data:/usr/src/app/data
+      - ./tmp:/usr/src/app/tmp
+    command: pytest tests/
