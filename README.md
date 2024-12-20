@@ -28,23 +28,19 @@ Ensure that you have the `url`, `start`, and `end` params set to run the script.
 
 ## Run the script
 
-1. Ensure that you have Docker Desktop running in the background.
+1. Ensure that you have Docker Desktop running in the background.,
 
-2. Then run the startup script in the `/bin` directory. Run the following to
-   start:
+2. Run the start command from the Makefile:
 
 ```bash
-sh bin/start.sh
+make run
 ```
 
-Follow the prompts to either run the `[a]udio` or `[v]ideo` scripts.
+## Run tests
 
-- If you're having trouble running the script, make sure the file has the
-  correct executable permissions by running:
-
-  ```bash
-  chmod +x bin/start.sh
-  ```
+```bash
+make test
+```
 
 ## Post-Processing
 
