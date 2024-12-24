@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audio/Video Pipeline Config Schema",
+  "type": "object",
+  "properties": {
+    "youtube_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "The YouTube URL for audio/video pipeline."
+    },
+    "stream_id": {
+      "type": "string",
+      "description": "An optional, human-readable identifier for this stream."
+    },
+    "audio": {
+      "type": "object",
+      "description": "Configuration for the audio-only pipeline (intro, outro, trim).",
+      "properties": {
+        "intro_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "An optional S3 or HTTP URL for the audio intro."
+        },
+        "outro_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "An optional S3 or HTTP URL for the audio outro."
+        },
+        "trim": {
+          "type": "object",
+          "description": "Optional trimming times for the audio (HH:MM:SS).",
+          "properties": {
+            "start_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}:\\d{2}$",
+              "description": "Start trimming time (e.g., 00:00:10)."
+            },
+            "end_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}:\\d{2}$",
+              "description": "End trimming time (e.g., 00:05:00)."
+            }
+          },
+          "required": ["start_time", "end_time"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "video": {
+      "type": "object",
+      "description": "Configuration for the video+audio pipeline (intro, outro, trim).",
+      "properties": {
+        "intro_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "An optional S3 or HTTP URL for the video intro."
+        },
+        "outro_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "An optional S3 or HTTP URL for the video outro."
+        },
+        "trim": {
+          "type": "object",
+          "description": "Optional trimming times for the video (HH:MM:SS).",
+          "properties": {
+            "start_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}:\\d{2}$",
+              "description": "Start trimming time (e.g., 00:01:00)."
+            },
+            "end_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}:\\d{2}$",
+              "description": "End trimming time (e.g., 00:10:00)."
+            }
+          },
+          "required": ["start_time", "end_time"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["youtube_url"],
+  "additionalProperties": false
+}

@@ -13,6 +13,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+ENV PYTHONPATH="/usr/src/app"
+
 # Test stage
 FROM base AS test
 RUN pip install pytest
@@ -20,4 +22,4 @@ CMD ["pytest", "tests/"]
 
 # Production stage
 FROM base AS production
-CMD ["python3", "./startup.py"]
+CMD ["python3", "startup.py"]

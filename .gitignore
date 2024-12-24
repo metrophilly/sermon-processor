@@ -3,5 +3,9 @@ __pycache__/
 data/
 tmp/
 
-.env
+.vscode/
+
+config/pipeline_config.json
+cache/
+output/
 tests/logs

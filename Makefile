@@ -1,4 +1,4 @@
-COMPOSE = docker-compose
+COMPOSE = docker-compose -f docker/docker-compose.yml
 SERVICE = sermon-processor
 TEST_SERVICE = tests
 LOG_DIR = tests/logs
@@ -26,18 +26,21 @@ clean:
 run: clean build
 	@echo "Running '$(SERVICE)' Docker service..."
 	$(COMPOSE) run --rm --name $(SERVICE) $(SERVICE)
-	@echo ""
-	@echo "---"
-	@echo "Production environment is running."
 
 # Run tests
 test: create-log-dir
 	@echo "Building Docker images for testing..."
 	$(COMPOSE) build $(TEST_SERVICE)
 	@echo "Running tests..."
-	$(COMPOSE) run --rm $(TEST_SERVICE) | tee $(LOG_FILE)
+	@if [ -n "$(TEST_FILE)" ]; then \
+		$(COMPOSE) run --rm $(TEST_SERVICE) pytest $(TEST_FILE) | tee $(LOG_FILE); \
+	else \
+		$(COMPOSE) run --rm $(TEST_SERVICE) pytest tests/ | tee $(LOG_FILE); \
+	fi
 	@echo "Test logs saved to $(LOG_FILE)"
 	@echo ""
 	@echo "---"
 	@echo "Cleaning up dangling Docker images..."
 	docker image prune -f || true
+
+# TODO: maybe add in a 'clean-logs' to wipe the test logs
