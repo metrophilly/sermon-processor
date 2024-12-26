@@ -4,6 +4,7 @@
     "acodec",
     "acompressor",
     "acrossfade",
+    "alimiter",
     "anullsrc",
     "anyio",
     "asetrate",

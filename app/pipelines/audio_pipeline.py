@@ -3,14 +3,10 @@ from app.constants import PipelineKeys
 from app.downloaders.youtube_downloader import YouTubeDownloader
 from app.downloaders.s3_downloader import S3Downloader
 from app.downloaders.downloader_proxy import DownloaderProxy
-from app.steps.convert_step import convert_step
 from app.steps.download_step import download_step
 from app.steps.trim_step import trim_step
-from app.steps.merge_step import merge_step
+from app.steps.merge_audio_step import merge_step
 from app.steps.move_step import move_step
-from app.data_models.pipeline_data import PipelineData
-from app.utils.observers import PipelineObserver
-from app.utils.validation import validate_audio_file
 
 
 def create_audio_pipeline(config):
