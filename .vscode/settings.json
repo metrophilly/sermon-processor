@@ -17,6 +17,7 @@
     "crossfade",
     "crossfadein",
     "crossfading",
+    "dataclass",
     "dotenv",
     "downloaders",
     "escription",
