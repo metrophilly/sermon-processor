@@ -1,55 +1,41 @@
 import os
 import shutil
-from app.pipelines.base_pipeline import PipelineStep
-from app.utils.paths import relative_path, ensure_dir_exists
+from app.data_models.pipeline_data import PipelineData
 
 
-class MoveStep(PipelineStep):
-    def __init__(self, source_key, output_filename, destination_dir_key="output"):
-        """
-        Args:
-            source_key (str): Key in `data` where the source file path is stored.
-            destination_dir_key (str): Key in `data` for the destination directory base.
-            output_filename (str): Final filename to save in the destination directory.
-        """
-        self.source_key = source_key
-        self.destination_dir_key = destination_dir_key
-        self.output_filename = output_filename
+def move_step(data: PipelineData, source_key=None, output_filename=None):
+    """
+    Moves the file from the source to the final output directory.
 
-    def process(self, data):
-        """
-        Moves the file to the desired output directory.
+    Args:
+        data (PipelineData): Current pipeline data object.
+        source_key (str): Optional key in `PipelineData` where the source file path is stored.
+        output_filename (str): Final file name and path for the destination.
 
-        Args:
-            data (dict): Pipeline data object.
+    Returns:
+        PipelineData: Updated data object with the final output path.
+    """
+    source_path = (
+        getattr(data, source_key) if source_key else data.active_audio_file_path
+    )
 
-        Returns:
-            dict: Updated pipeline data with the new output path.
-        """
-        source_path = relative_path(data.get(self.source_key))
-        if not source_path or not os.path.exists(source_path):
-            raise ValueError(
-                f"Source file not found for {self.source_key}: {source_path}"
-            )
+    if not source_path or not os.path.exists(source_path):
+        raise ValueError(f"Source file does not exist: {source_path}")
 
-        # Get destination directory from data, defaulting to "output"
-        destination_base = data.get(self.destination_dir_key, "output")
-        destination_dir = os.path.join(
-            destination_base, os.path.dirname(self.output_filename)
-        )
-        ensure_dir_exists(destination_dir)
+    # Ensure output directory exists
+    if not output_filename:
+        raise ValueError("Output filename must be specified.")
+    output_dir = os.path.dirname(output_filename)
+    os.makedirs(output_dir, exist_ok=True)
 
-        # Final destination path
-        destination_path = os.path.join(
-            destination_dir, os.path.basename(self.output_filename)
-        )
+    # Construct the full destination path
+    destination_path = os.path.join(output_dir, os.path.basename(output_filename))
 
-        # Move the file
-        print(f"Moving file from {source_path} to {destination_path}...")
-        shutil.move(source_path, destination_path)
+    # Move the file
+    print(f"Moving file from {source_path} to {destination_path}...")
+    shutil.move(source_path, destination_path)
 
-        # Store relative paths in the data object
-        relative_destination_path = os.path.relpath(destination_path, start=os.getcwd())
-        data["final_output_path"] = relative_destination_path
+    # Update the data object with the final path
+    data.final_output_path = destination_path
 
-        return data
+    return data

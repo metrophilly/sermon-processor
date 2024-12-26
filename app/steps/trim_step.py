@@ -1,48 +1,48 @@
+# app/steps/trim_step.py
+import os
 import subprocess
-from app.pipelines.base_pipeline import PipelineStep
-from app.utils.paths import relative_path
+from app.data_models.pipeline_data import PipelineData
+from app.constants import PipelineKeys
+from app.utils.paths import file_ext
 
 
-class TrimStep(PipelineStep):
-    def __init__(self, start_time, end_time, is_audio=False):
-        self.start_time = start_time
-        self.end_time = end_time
-        self.is_audio = is_audio
+def trim_step(
+    data: PipelineData, start_time, end_time, is_audio=False, overwrite=False
+):
 
-    def process(self, data):
-        """
-        Expects data["audio_file_path"] (if is_audio=True)
-        or data["video_file_path"] (if is_audio=False).
-        """
-        file_key = "audio_file_path" if self.is_audio else "video_file_path"
-        input_file = data.get(file_key)
-        if not input_file:
-            raise ValueError(f"No input file found in {file_key}")
+    file_key = (
+        PipelineKeys.ACTIVE_FILE_PATH if is_audio else "video_file_path"
+    )  # TODO, swap to const later
+    input_file = getattr(data, file_key, None)
 
-        output_file = (
-            input_file.replace(".mp3", "_trimmed.mp3")
-            if self.is_audio
-            else input_file.replace(".mp4", "_trimmed.mp4")
-        )
+    if not input_file:
+        raise ValueError(f"No input file found for {file_key}")
 
-        command = [
-            "ffmpeg",
-            "-i",
-            input_file,
-            "-ss",
-            self.start_time,
-            "-to",
-            self.end_time,
-            "-c",
-            "copy",
-            output_file,
-        ]
+    ext = file_ext(input_file)
+    output_file = input_file.replace(ext, f"_trimmed{ext}")
 
-        print(
-            f"Trimming file from {self.start_time} to {self.end_time}: {input_file} -> {output_file}"
-        )
-        subprocess.run(command, check=True)
-
-        # Update the pipeline data to point to the trimmed file
-        data[file_key] = relative_path(output_file)
+    if os.path.exists(output_file) and not overwrite:
+        print(f"Output file already exists: {output_file}. Skipping trim step.")
+        setattr(data, file_key, output_file)
         return data
+
+    command = [
+        "ffmpeg",
+        "-i",
+        input_file,
+        "-ss",
+        start_time,
+        "-to",
+        end_time,
+        "-c",
+        "copy",
+        output_file,
+    ]
+
+    print(
+        f"Trimming file from {start_time} to {end_time}: {input_file} -> {output_file}"
+    )
+    subprocess.run(command, check=True)
+    setattr(data, file_key, output_file)
+
+    return data

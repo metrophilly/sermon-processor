@@ -1,8 +1,8 @@
 import sys
 
 from scripts.config_loader import load_and_validate_config
-from app.pipelines.audio_pipeline_factory import create_audio_pipeline
-from app.pipelines.video_pipeline_factory import create_video_pipeline
+from app.pipelines.audio_pipeline import create_audio_pipeline
+from app.pipelines.video_pipeline import create_video_pipeline
 
 
 def main(

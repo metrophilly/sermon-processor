@@ -1,58 +1,82 @@
-import subprocess
 import os
-from app.pipelines.base_pipeline import PipelineStep
-from app.utils.paths import absolute_path, ensure_dir_exists
+import subprocess
+from app.constants import PipelineKeys
+from app.data_models.pipeline_data import PipelineData
+from app.utils.normalize_audio import normalize_audio
 
 
-class MergeStep(PipelineStep):
-    def __init__(self, is_audio=False):
-        self.is_audio = is_audio
+def merge_step(data: PipelineData, is_audio=False, output_format="mp3"):
+    """
+    Merges intro, main, and outro audio files into a single output file.
 
-    def process(self, data):
-        if self.is_audio:
-            # Get absolute paths for intro, main, and outro
-            intro_path = absolute_path(data.get("audio_intro_path"))
-            main_path = absolute_path(data.get("audio_file_path"))
-            outro_path = absolute_path(data.get("audio_outro_path"))
+    Args:
+        data (PipelineData): The pipeline data object.
+        is_audio (bool): Whether the operation is for audio files.
+        output_format (str): The desired output format (default: "mp3").
+    """
+    if is_audio:
+        intro_path = os.path.abspath(data.audio_intro_path)
+        main_path = os.path.abspath(data.active_file_path)
+        outro_path = os.path.abspath(data.audio_outro_path)
 
-            if not all([intro_path, main_path, outro_path]):
-                raise ValueError("Missing required audio paths in data.")
+        if not all([intro_path, main_path, outro_path]):
+            raise ValueError("Missing one or more required audio file paths.")
 
-            # Ensure output directory exists
-            output_dir = os.path.dirname(main_path)
-            ensure_dir_exists(output_dir)
+        # Normalize all files to a consistent format (e.g., WAV)
+        normalized_paths = []
+        for path in [intro_path, main_path, outro_path]:
+            base, ext = os.path.splitext(path)
+            normalized_path = f"{base}_normalized.wav"
+            # normalize_audio(path, normalized_path)
+            normalize_audio(
+                str(path),
+                str(normalized_path),
+                codec="pcm_s16le",
+                sample_rate=44100,
+            )
 
-            # Output file and merge list paths
-            output_file = os.path.join(output_dir, "merged_audio.mp3")
-            file_list_path = os.path.join(output_dir, "merge_list.txt")
+            normalized_paths.append(normalized_path)
 
-            # Generate the merge list file with absolute paths
-            with open(file_list_path, "w") as f:
-                f.write(f"file '{intro_path}'\n")
-                f.write(f"file '{main_path}'\n")
-                f.write(f"file '{outro_path}'\n")
+        # Create the file list for `ffmpeg`
+        base, _ = os.path.splitext(main_path)
+        file_list_path = f"{base}_file_list.txt"
+        with open(file_list_path, "w") as f:
+            for normalized_path in normalized_paths:
+                f.write(f"file '{normalized_path}'\n")
 
-            # FFmpeg command to concatenate the files
-            command = [
-                "ffmpeg",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                file_list_path,
-                "-c",
-                "copy",
-                output_file,
-            ]
+        # Determine output file name dynamically
+        output_file = f"{base}_merged.{output_format}"
 
-            print(f"Merging files into {output_file}...")
-            subprocess.run(command, check=True)
+        command = [
+            "ffmpeg",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(file_list_path),
+            "-c:a",
+            "pcm_s16le" if output_format == "wav" else "libmp3lame",
+            # These parameters should match normalization
+            "-ar",
+            "44100",
+            "-ac",
+            "2",
+            "-b:a",
+            "192k",
+            output_file,
+        ]
 
-            # Clean up the temporary merge list file
-            os.remove(file_list_path)
+        # Run `ffmpeg` command
+        print(f"Merging files into {output_file}...")
+        subprocess.run(command, check=True)
 
-            # Store the merged file path in the data dictionary
-            data["merged_audio_file_path"] = output_file
+        # Clean up temporary files
+        # os.remove(file_list_path)
+        # for path in normalized_paths:
+        #     os.remove(path)
 
-        return data
+        # Update pipeline data with the merged file path
+        data.active_file_path = output_file
+
+    return data

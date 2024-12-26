@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from datetime import datetime
-from app.pipelines.audio_pipeline_factory import create_audio_pipeline
+from app.pipelines.audio_pipeline import create_audio_pipeline
 
 
 class TestAudioPipeline(unittest.TestCase):

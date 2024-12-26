@@ -21,14 +21,22 @@ class DownloaderProxy:
         return os.path.join(sub_dir, filename)
 
     def download(self, url, date, stream_id, filename):
+        cache_path = self._get_cache_path(date, stream_id, filename)
 
-        initial_path = self._get_cache_path(date, stream_id, filename)
+        # If the downloader has a `get_output_path` method, use it to predict the output path
+        if hasattr(self.real_downloader, "get_output_path"):
+            expected_path = self.real_downloader.get_output_path(url, cache_path)
+        else:
+            # Fallback to the base cache path if `get_output_path` is not available
+            expected_path = cache_path
 
-        if os.path.exists(initial_path):
-            print(f"Using cached file for {url}: {initial_path}")
-            return initial_path
+        # Check if the file already exists
+        if os.path.exists(expected_path):
+            print(f"Using cached file for {url}: {expected_path}")
+            return expected_path
 
+        # Download if not cached
         print(f"Downloading {url} to cache...")
-        final_path = self.real_downloader.download(url, initial_path)
-        print(f"Downloaded and cached: {final_path}")
-        return final_path
+        downloaded_path = self.real_downloader.download(url, cache_path)
+        print(f"Downloaded and cached: {downloaded_path}")
+        return downloaded_path

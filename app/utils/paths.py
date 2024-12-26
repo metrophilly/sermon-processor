@@ -1,23 +1,27 @@
 import os
 
 
-def relative_path(path):
+def file_ext(path):
     """
-    Convert an absolute path to a relative path based on the current working directory.
-    """
-    return os.path.relpath(path, start=os.getcwd())
+    Returns the file extension for the given path.
 
+    Args:
+        path (str): The file path.
 
-def absolute_path(path):
-    """
-    Convert a relative path to an absolute path based on the current working directory.
-    """
-    return os.path.abspath(path)
+    Returns:
+        str: The file extension, including the leading dot (e.g., ".mp3").
 
+    Raises:
+        ValueError: If the path is None or empty.
+        FileNotFoundError: If the path does not point to an existing file.
+    """
+    if not path:
+        raise ValueError("Path cannot be None or empty.")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The file does not exist: {path}")
 
-def ensure_dir_exists(path):
-    """
-    Ensure a directory exists. If it doesn't, create it.
-    """
-    os.makedirs(path, exist_ok=True)
-    return path
+    ext = os.path.splitext(path)[1].lower()
+    if not ext:
+        raise ValueError(f"No extension found for file: {path}")
+
+    return ext
