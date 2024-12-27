@@ -1,7 +1,13 @@
 import subprocess
 
 
-def normalize_audio(input_path, output_path, codec="pcm_s16le", sample_rate=44100):
+def normalize_audio(
+    input_path,
+    output_path,
+    codec="pcm_s16le",
+    sample_rate=44100,
+    ffmpeg_loglevel="info",
+):
     """
     Normalize audio file with consistent loudness, sample rate, and format.
 
@@ -19,6 +25,8 @@ def normalize_audio(input_path, output_path, codec="pcm_s16le", sample_rate=4410
 
     command = [
         "ffmpeg",
+        "-loglevel",
+        ffmpeg_loglevel,
         "-i",
         input_path,
         "-acodec",

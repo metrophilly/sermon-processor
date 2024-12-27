@@ -1,8 +1,8 @@
 from datetime import datetime
 import sys
 from app.data_models.pipeline_data import PipelineData
+from app.pipelines.video_pipeline import create_video_pipeline
 from scripts.config_loader import load_and_validate_config
-from app.pipelines.audio_pipeline import create_audio_pipeline
 from colorama import Fore, Style
 
 
@@ -12,7 +12,8 @@ def main(
     config = load_and_validate_config(config_file=config_path, schema_file=schema_path)
     data = PipelineData()
 
-    pipeline = create_audio_pipeline(config)
+    pipeline = create_video_pipeline(config)
+
     start_time = datetime.now()
 
     # Execute the pipeline
@@ -31,7 +32,7 @@ def main(
     end_time = datetime.now()
     elapsed_time = end_time - start_time
 
-    print(Fore.YELLOW + f"Audio pipeline complete: {data}")
+    print(Fore.YELLOW + f"Video pipeline complete: {data}")
     print(Fore.GREEN + f"Total elapsed time: {elapsed_time}" + Style.RESET_ALL)
 
     return data

@@ -36,7 +36,6 @@ def test_trim_step_success_audio(
     # Arrange
     start_time = "00:00:01"
     end_time = "00:00:05"
-    is_audio = True
     overwrite = False
     input_file = pipeline_data.active_file_path
     output_file = input_file.replace(".wav", "_trimmed.wav")
@@ -50,7 +49,6 @@ def test_trim_step_success_audio(
         data=pipeline_data,
         start_time=start_time,
         end_time=end_time,
-        is_audio=is_audio,
         overwrite=overwrite,
     )
 
@@ -77,7 +75,6 @@ def test_trim_step_overwrite(pipeline_data, mock_subprocess_run, mock_os_path_ex
     # Arrange
     start_time = "00:00:01"
     end_time = "00:00:05"
-    is_audio = True
     overwrite = True
     input_file = pipeline_data.active_file_path
     output_file = input_file.replace(".wav", "_trimmed.wav")
@@ -92,7 +89,6 @@ def test_trim_step_overwrite(pipeline_data, mock_subprocess_run, mock_os_path_ex
         data=pipeline_data,
         start_time=start_time,
         end_time=end_time,
-        is_audio=is_audio,
         overwrite=overwrite,
     )
 
@@ -123,7 +119,7 @@ def test_trim_step_no_input_file(mock_subprocess_run):
 
     # Act & Assert
     with pytest.raises(ValueError, match="No input file found"):
-        trim_step(data, start_time, end_time, is_audio=True)
+        trim_step(data, start_time, end_time)
 
 
 def test_trim_step_output_already_exists(
@@ -132,7 +128,6 @@ def test_trim_step_output_already_exists(
     # Arrange
     start_time = "00:00:01"
     end_time = "00:00:05"
-    is_audio = True
     overwrite = False
     output_file = pipeline_data.active_file_path.replace(".wav", "_trimmed.wav")
     mock_os_path_exists.return_value = True  # Simulate output file exists
@@ -142,7 +137,6 @@ def test_trim_step_output_already_exists(
         data=pipeline_data,
         start_time=start_time,
         end_time=end_time,
-        is_audio=is_audio,
         overwrite=overwrite,
     )
 

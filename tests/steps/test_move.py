@@ -1,4 +1,5 @@
 import os
+from app.constants import PipelineKeys
 import pytest
 from unittest.mock import patch
 from app.steps.move_step import move_step
@@ -45,13 +46,13 @@ def test_move_step_with_source_key(tmp_path):
     """
     Test move_step with a specified `source_key`.
     """
-    source_key = "audio_file_path"
+    source_key = PipelineKeys.MAIN_FILE_PATH
     source_file = tmp_path / "source.wav"
     source_file.write_text("dummy content")
     output_file = tmp_path / "final_output.wav"
 
     data = PipelineData(
-        audio_file_path=str(source_file),
+        main_file_path=str(source_file),
         final_output_path=None,
     )
 

@@ -9,9 +9,9 @@ class PipelineData:
     Structured data model for pipeline operations.
     """
 
-    audio_file_path: Optional[str] = None
-    audio_intro_path: Optional[str] = None
-    audio_outro_path: Optional[str] = None
+    main_file_path: Optional[str] = None
+    intro_file_path: Optional[str] = None
+    outro_file_path: Optional[str] = None
 
     active_file_path: Optional[str] = None
     final_output_path: Optional[str] = None

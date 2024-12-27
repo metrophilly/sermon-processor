@@ -1,22 +1,23 @@
 from datetime import datetime
+import os
 from app.constants import PipelineKeys
 from app.downloaders.youtube_downloader import YouTubeDownloader
 from app.downloaders.s3_downloader import S3Downloader
 from app.downloaders.downloader_proxy import DownloaderProxy
 from app.steps.download_step import download_step
 from app.steps.fade_in_out_step import fade_in_out_step
-from app.steps.trim_step import trim_step
-from app.steps.merge_audio_step import merge_audio_step
+from app.steps.merge_video_step import merge_video_step
 from app.steps.move_step import move_step
+from app.steps.trim_step import trim_step
 from app.utils.youtube import get_youtube_upload_date
 
 
-def create_audio_pipeline(config):
+def create_video_pipeline(config):
     """
     Builds the pipeline to process audio files using functional chaining.
     """
     stream_id = config.get("stream_id", "default-audio-stream")
-    audio_conf = config.get("audio", {})
+    video_conf = config.get("video", {})
 
     youtube_url = config.get("youtube_url")
     if youtube_url:
@@ -28,83 +29,89 @@ def create_audio_pipeline(config):
         date = datetime.now().strftime("%Y-%m-%d")
 
     # build proxies
-    audio_proxy = DownloaderProxy(
-        real_downloader=YouTubeDownloader(audio_only=True),
-        cache_dir="cache/audio",
+    video_proxy = DownloaderProxy(
+        real_downloader=YouTubeDownloader(quiet=True),
+        cache_dir="cache/video",
     )
     s3_proxy = DownloaderProxy(real_downloader=S3Downloader(), cache_dir="cache/s3")
 
     # build pipeline steps
     steps = [
         (
-            "Download intro audio",
+            "Download intro video",
             lambda data: (
                 download_step(
                     data,
                     downloader=s3_proxy,
-                    url=audio_conf.get("intro_url"),
-                    filename="audio_intro.wav",
+                    url=video_conf.get("intro_url"),
+                    filename="video_intro.mp4",
                     key=PipelineKeys.INTRO_FILE_PATH,
                 )
-                if audio_conf.get("intro_url")
+                if video_conf.get("intro_url")
                 else data
             ),
         ),
         (
-            "Download outro audio",
+            "Download outro video",
             lambda data: (
                 download_step(
                     data,
                     downloader=s3_proxy,
-                    url=audio_conf.get("outro_url"),
-                    filename="audio_outro.wav",
+                    url=video_conf.get("outro_url"),
+                    filename="video_outro.mp4",
                     key=PipelineKeys.OUTRO_FILE_PATH,
                 )
-                if audio_conf.get("outro_url")
+                if video_conf.get("outro_url")
                 else data
             ),
         ),
         (
-            "Download YouTube audio",
+            "Download YouTube video",
             lambda data: download_step(
                 data,
-                downloader=audio_proxy,
+                downloader=video_proxy,
                 url=config.get("youtube_url"),
-                filename="audio.%(ext)s",
+                filename="video.%(ext)s",
                 key=PipelineKeys.MAIN_FILE_PATH,
                 date=date,
                 stream_id=stream_id,
             ),
         ),
         (
-            "Trim audio",
+            "Trim video",
             lambda data: (
                 trim_step(
                     data,
-                    start_time=audio_conf.get("trim", {}).get("start_time"),
-                    end_time=audio_conf.get("trim", {}).get("end_time"),
+                    start_time=video_conf.get("trim", {}).get("start_time"),
+                    end_time=video_conf.get("trim", {}).get("end_time"),
+                    ffmpeg_loglevel="info",
                     ffmpeg_hide_banner=True,
                 )
-                if "trim" in audio_conf
+                if "trim" in video_conf
                 else data
             ),
         ),
         (
             "Apply fade-in/out",
             lambda data: fade_in_out_step(
-                data, fade_duration=1, ffmpeg_loglevel="info", is_video=False
+                data, fade_duration=1, ffmpeg_loglevel="info", is_video=True
             ),
         ),
         (
-            "Merge audio",
-            lambda data: merge_audio_step(data, output_format="wav"),
+            "Merge clips",
+            lambda data: merge_video_step(
+                data,
+                output_format="mp4",
+                ffmpeg_loglevel="info",
+                ffmpeg_hide_banner=True,
+            ),
         ),
         (
-            "Move final audio",
+            "Move final video to output dir",
             lambda data: move_step(
                 data,
                 source_key=PipelineKeys.ACTIVE_FILE_PATH,
-                output_filename=f"output/{stream_id}/{date}.wav",
+                output_filename=f"output/{stream_id}/{date}.mp4",
             ),
         ),
     ]

@@ -7,12 +7,15 @@ from app.utils.paths import file_ext
 
 
 def trim_step(
-    data: PipelineData, start_time, end_time, is_audio=False, overwrite=False
+    data: PipelineData,
+    start_time,
+    end_time,
+    ffmpeg_loglevel="info",
+    ffmpeg_hide_banner=False,
+    overwrite=False,
 ):
 
-    file_key = (
-        PipelineKeys.ACTIVE_FILE_PATH if is_audio else "video_file_path"
-    )  # TODO, swap to const later
+    file_key = PipelineKeys.ACTIVE_FILE_PATH
     input_file = getattr(data, file_key, None)
 
     if not input_file:
@@ -28,6 +31,9 @@ def trim_step(
 
     command = [
         "ffmpeg",
+        "-loglevel",
+        ffmpeg_loglevel,
+        "-hide_banner" if ffmpeg_hide_banner else None,
         "-i",
         input_file,
         "-ss",

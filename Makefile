@@ -27,6 +27,23 @@ run: clean build
 	@echo "Running '$(SERVICE)' Docker service..."
 	$(COMPOSE) run --rm --name $(SERVICE) $(SERVICE)
 
+# Run the audio pipeline
+run-audio: clean build
+	@echo "Running the audio pipeline..."
+	$(COMPOSE) run --rm $(SERVICE) python3 scripts/run_audio_pipeline.py
+
+# Run the video pipeline
+run-video: clean build
+	@echo "Running the video pipeline..."
+	$(COMPOSE) run --rm $(SERVICE) python3 scripts/run_video_pipeline.py
+
+# Run both pipelines
+run-both: clean build
+	@echo "Running the audio pipeline..."
+	$(COMPOSE) run --rm $(SERVICE) python3 scripts/run_audio_pipeline.py
+	@echo "Running the video pipeline..."
+	$(COMPOSE) run --rm $(SERVICE) python3 scripts/run_video_pipeline.py
+
 # Run tests
 test: create-log-dir
 	@echo "Building Docker images for testing..."
