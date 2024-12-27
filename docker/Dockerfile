@@ -17,7 +17,7 @@ ENV PYTHONPATH="/usr/src/app"
 
 # Test stage
 FROM base AS test
-RUN pip install pytest
+RUN pip install pytest pytest-mock pydub
 CMD ["pytest", "tests/"]
 
 # Production stage

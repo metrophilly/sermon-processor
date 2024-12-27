@@ -15,9 +15,7 @@ def move_step(data: PipelineData, source_key=None, output_filename=None):
     Returns:
         PipelineData: Updated data object with the final output path.
     """
-    source_path = (
-        getattr(data, source_key) if source_key else data.active_audio_file_path
-    )
+    source_path = getattr(data, source_key) if source_key else data.active_file_path
 
     if not source_path or not os.path.exists(source_path):
         raise ValueError(f"Source file does not exist: {source_path}")

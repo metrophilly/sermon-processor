@@ -55,6 +55,7 @@
     "versetxt",
     "videoclips",
     "videofile",
-    "xfade"
+    "xfade",
+    "ytdl"
   ]
 }

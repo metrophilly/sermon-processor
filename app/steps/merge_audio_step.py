@@ -72,9 +72,11 @@ def merge_step(data: PipelineData, is_audio=False, output_format="mp3"):
         subprocess.run(command, check=True)
 
         # Clean up temporary files
-        os.remove(file_list_path)
+        if os.path.exists(file_list_path):
+            os.remove(file_list_path)
         for path in normalized_paths:
-            os.remove(path)
+            if os.path.exists(path):
+                os.remove(path)
 
         # Update pipeline data with the merged file path
         data.active_file_path = output_file

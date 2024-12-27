@@ -7,15 +7,24 @@ from app.steps.download_step import download_step
 from app.steps.trim_step import trim_step
 from app.steps.merge_audio_step import merge_step
 from app.steps.move_step import move_step
+from app.utils.youtube import get_youtube_upload_date
 
 
 def create_audio_pipeline(config):
     """
     Builds the pipeline to process audio files using functional chaining.
     """
-    date = datetime.now().strftime("%Y-%m-%d")
     stream_id = config.get("stream_id", "default-audio-stream")
     audio_conf = config.get("audio", {})
+
+    youtube_url = config.get("youtube_url")
+    if youtube_url:
+        date = get_youtube_upload_date(youtube_url)
+        if not date:
+            print("Failed to fetch upload date. Falling back to the current date.")
+            date = datetime.now().strftime("%Y-%m-%d")
+    else:
+        date = datetime.now().strftime("%Y-%m-%d")
 
     # build proxies
     audio_proxy = DownloaderProxy(
