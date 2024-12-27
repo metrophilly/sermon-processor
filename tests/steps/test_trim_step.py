@@ -1,9 +1,7 @@
-import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.steps.trim_step import trim_step
 from app.data_models.pipeline_data import PipelineData
-from app.constants import PipelineKeys
 
 
 @pytest.fixture
@@ -53,21 +51,21 @@ def test_trim_step_success_audio(
     )
 
     # Assert
-    mock_subprocess_run.assert_called_once_with(
-        [
-            "ffmpeg",
-            "-i",
-            input_file,
-            "-ss",
-            start_time,
-            "-to",
-            end_time,
-            "-c",
-            "copy",
-            output_file,
-        ],
-        check=True,
-    )
+    expected_command = [
+        "ffmpeg",
+        "-loglevel",
+        "info",
+        "-i",
+        input_file,
+        "-ss",
+        start_time,
+        "-to",
+        end_time,
+        "-c",
+        "copy",
+        output_file,
+    ]
+    mock_subprocess_run.assert_called_once_with(expected_command, check=True)
     assert result.active_file_path == output_file
 
 
@@ -93,21 +91,21 @@ def test_trim_step_overwrite(pipeline_data, mock_subprocess_run, mock_os_path_ex
     )
 
     # Assert
-    mock_subprocess_run.assert_called_once_with(
-        [
-            "ffmpeg",
-            "-i",
-            input_file,
-            "-ss",
-            start_time,
-            "-to",
-            end_time,
-            "-c",
-            "copy",
-            output_file,
-        ],
-        check=True,
-    )
+    expected_command = [
+        "ffmpeg",
+        "-loglevel",
+        "info",
+        "-i",
+        input_file,
+        "-ss",
+        start_time,
+        "-to",
+        end_time,
+        "-c",
+        "copy",
+        output_file,
+    ]
+    mock_subprocess_run.assert_called_once_with(expected_command, check=True)
     assert result.active_file_path == output_file
 
 

@@ -1,4 +1,3 @@
-import os
 import pytest
 import subprocess
 from unittest.mock import patch
@@ -21,6 +20,8 @@ def test_normalize_audio_success(mock_run, dummy_audio_file):
     mock_run.assert_called_once_with(
         [
             "ffmpeg",
+            "-loglevel",
+            "info",
             "-i",
             str(input_path),
             "-acodec",

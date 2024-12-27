@@ -1,7 +1,5 @@
 # 🎛️ Metro Sermons Processor
 
-**BREAKING CHANGES FROM DEC 2024 REFACTOR!**
-
 ## tl;dr
 
 1. set `config/pipeline_config.json`
@@ -24,6 +22,12 @@ in the background)
 
 - to run:
   - `make run`
+- to run just audio processing:
+  - `make run-audio`
+- to run just video processing:
+  - `make run-video`
+- to run both sequentially:
+  - `make run-both`
 
 ## Testing
 
@@ -65,6 +69,31 @@ filepath is going to be, and if it already exists, we just use that filepath,
 and skip the download. This should save us a bunch of time on script re-runs.
 
 `app/cache/` holds the downloaded and intermediary files.
+
+### `ffmpeg` Flag Notes
+
+`ffmpeg` is the main file processing engine. To run it in the different steps,
+we construct a string array of commands and flags, then call it directly as a
+system subprocess. In the constructed flags the following are useful to know:
+
+- `-crf` - Constant Rate Factor
+  - usually set to: 16
+  - "The range of the quantizer scale is 0-51: where 0 is lossless, 23 is
+    default, and 51 is worst possible. A lower value is a higher quality and a
+    subjectively sane range is 18-28. Consider 18 to be visually lossless or
+    nearly so: it should look the same or nearly the same as the input but it
+    isn't technically lossless."
+- `-preset`
+  - usually set to: ultrafast
+  - "These presets affect the encoding speed. Using a slower preset gives you
+    better compression, or quality per filesize, whereas faster presets give you
+    worse compression. In general, you should just use the preset you can afford
+    to wait for. Presets can be ultrafast, superfast, veryfast, faster, fast,
+    medium (default), slow and veryslow."
+
+We've set the default to `crf=16` and `preset=ultrafast` because we're ok with
+the larger resultant filesize, as we're generally just going to upload it to
+youtube and then delete it.
 
 ### Output
 

@@ -29,21 +29,23 @@ def trim_step(
         setattr(data, file_key, output_file)
         return data
 
-    command = [
-        "ffmpeg",
-        "-loglevel",
-        ffmpeg_loglevel,
-        "-hide_banner" if ffmpeg_hide_banner else None,
-        "-i",
-        input_file,
-        "-ss",
-        start_time,
-        "-to",
-        end_time,
-        "-c",
-        "copy",
-        output_file,
-    ]
+    command = ["ffmpeg", "-loglevel", ffmpeg_loglevel]
+    if ffmpeg_hide_banner:
+        command.extend(["-hide_banner"])
+
+    command.extend(
+        [
+            "-i",
+            input_file,
+            "-ss",
+            start_time,
+            "-to",
+            end_time,
+            "-c",
+            "copy",
+            output_file,
+        ]
+    )
 
     print(
         f"Trimming file from {start_time} to {end_time}: {input_file} -> {output_file}"
