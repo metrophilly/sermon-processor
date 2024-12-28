@@ -2,6 +2,8 @@ COMPOSE = docker-compose -f docker/docker-compose.yml
 SERVICE = sermon-processor
 TEST_SERVICE = tests
 LOG_DIR = tests/logs
+CACHE_DIR = cache
+OUTPUT_DIR = output
 TIMESTAMP = $(shell date +"%Y%m%d_%H%M%S")
 LOG_FILE = $(LOG_DIR)/test_output_$(TIMESTAMP).log
 
@@ -21,6 +23,25 @@ clean:
 	$(COMPOSE) down
 	docker image prune -f || true
 	@echo "Cleanup complete."
+
+clean-dirs:
+	@echo "Deleting cache and output directories..."
+	@if [ -d "$(CACHE_DIR)" ]; then \
+		rm -rf $(CACHE_DIR); \
+		echo "Deleted: $(CACHE_DIR)"; \
+	else \
+		echo "$(CACHE_DIR) not found. Skipping..."; \
+	fi
+	@if [ -d "$(OUTPUT_DIR)" ]; then \
+		rm -rf $(OUTPUT_DIR); \
+		echo "Deleted: $(OUTPUT_DIR)"; \
+	else \
+		echo "$(OUTPUT_DIR) not found. Skipping..."; \
+	fi
+	@echo "Cache and output directories cleaned."
+
+clean-all: clean clean-dirs
+	@echo "Performed full cleanup of Docker and directories."
 
 # Run the production service (depends on build and clean)
 run: clean build
