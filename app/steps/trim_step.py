@@ -3,6 +3,7 @@ import os
 import subprocess
 from app.data_models.pipeline_data import PipelineData
 from app.constants import PipelineKeys
+from app.utils.helpers import add_intermediate_filepath
 from app.utils.paths import file_ext
 
 
@@ -52,5 +53,7 @@ def trim_step(
     )
     subprocess.run(command, check=True)
     setattr(data, file_key, output_file)
+
+    data = add_intermediate_filepath(data, output_file)
 
     return data

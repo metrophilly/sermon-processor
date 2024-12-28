@@ -2,6 +2,7 @@ import os
 import subprocess
 from app.constants import PipelineKeys
 from app.data_models.pipeline_data import PipelineData
+from app.utils.helpers import add_intermediate_filepath
 from app.utils.normalize_audio import normalize_audio
 
 
@@ -80,5 +81,7 @@ def merge_audio_step(data: PipelineData, output_format="mp3"):
 
     # Update pipeline data with the merged file path
     data.active_file_path = output_file
+
+    data = add_intermediate_filepath(data, output_file)
 
     return data

@@ -1,8 +1,8 @@
-import os
 import subprocess
 
 from app.constants import PipelineKeys
 from app.data_models.pipeline_data import PipelineData
+from app.utils.helpers import add_intermediate_filepath
 from app.utils.paths import file_ext
 
 
@@ -84,7 +84,8 @@ def fade_in_out_step(
 
     print(f"Applying fade-in and fade-out to {input_path}, saving to {output_path}...")
     subprocess.run(command, check=True)
+    setattr(data, PipelineKeys.ACTIVE_FILE_PATH, output_path)
 
-    data.active_file_path = output_path
+    data = add_intermediate_filepath(data, output_path)
 
     return data

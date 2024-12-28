@@ -4,6 +4,7 @@ from app.constants import PipelineKeys
 from app.downloaders.youtube_downloader import YouTubeDownloader
 from app.downloaders.s3_downloader import S3Downloader
 from app.downloaders.downloader_proxy import DownloaderProxy
+from app.steps.delete_files_step import delete_files_step
 from app.steps.download_step import download_step
 from app.steps.fade_in_out_step import fade_in_out_step
 from app.steps.merge_video_step import merge_video_step
@@ -112,6 +113,15 @@ def create_video_pipeline(config):
                 data,
                 source_key=PipelineKeys.ACTIVE_FILE_PATH,
                 output_filename=f"output/{stream_id}/{date}.mp4",
+            ),
+        ),
+        (
+            "Delete intermediate files",
+            lambda data: delete_files_step(
+                data,
+                file_keys=[
+                    PipelineKeys.INTERMEDIATE_FILES,
+                ],
             ),
         ),
     ]

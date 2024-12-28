@@ -16,3 +16,4 @@ class PipelineData:
     active_file_path: Optional[str] = None
     final_output_path: Optional[str] = None
     downloaded_files: List[str] = field(default_factory=list)
+    intermediate_files: List[str] = field(default_factory=list)

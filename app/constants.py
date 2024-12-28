@@ -6,3 +6,4 @@ class PipelineKeys:
     ACTIVE_FILE_PATH = "active_file_path"
     FINAL_OUTPUT_PATH = "final_output_path"
     DOWNLOADED_FILES = "downloaded_files"
+    INTERMEDIATE_FILES = "intermediate_files"

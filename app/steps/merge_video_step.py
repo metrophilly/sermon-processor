@@ -1,6 +1,7 @@
 import os
 import subprocess
 from app.data_models.pipeline_data import PipelineData
+from app.utils.helpers import add_intermediate_filepath
 from app.utils.normalize_video import normalize_video
 
 
@@ -88,5 +89,7 @@ def merge_video_step(
 
     # Update pipeline data with the merged file path
     data.active_file_path = output_file
+
+    data = add_intermediate_filepath(data, output_file)
 
     return data
