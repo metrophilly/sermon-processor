@@ -1,7 +1,5 @@
 class Downloader:
-    """
-    Base class for downloaders.
-    """
+
     def download(self, url, destination):
         """
         Download a file from the given URL to the specified destination.

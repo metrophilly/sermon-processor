@@ -53,7 +53,7 @@ def merge_video_step(
         for normalized_path in normalized_paths:
             f.write(f"file '{normalized_path}'\n")
 
-    # Determine output file name
+    # Determine output file name dynamically
     output_file = f"{base}_merged.{output_format}"
 
     command = ["ffmpeg", "-loglevel", ffmpeg_loglevel]
@@ -75,6 +75,7 @@ def merge_video_step(
         ]
     )
 
+    # Run `ffmpeg` command
     print(f"Merging files into {output_file}...")
     subprocess.run(command, check=True)
 

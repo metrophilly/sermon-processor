@@ -45,6 +45,7 @@ def fade_in_out_step(
     # Calculate the start time for the fade-out
     fade_out_start = total_duration - fade_duration
 
+    # fading the audio
     command = [
         "ffmpeg",
         "-loglevel",
@@ -60,6 +61,7 @@ def fade_in_out_step(
         "192k",
     ]
 
+    # just fading the video
     if is_video:
         command.extend(
             [

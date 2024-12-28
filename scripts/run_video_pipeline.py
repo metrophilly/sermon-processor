@@ -13,14 +13,14 @@ def main(
     data = PipelineData()
 
     pipeline = create_video_pipeline(config)
-
     start_time = datetime.now()
 
-    # Execute the pipeline
     for description, step_fn in pipeline:
         step_start_time = datetime.now()
         print(Fore.YELLOW + "===")
         print(f"Starting step: " + Fore.GREEN + f"{description}" + Style.RESET_ALL)
+
+        # execute the pipeline step
         data = step_fn(data)
 
         step_end_time = datetime.now()

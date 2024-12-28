@@ -12,6 +12,9 @@ def merge_audio_step(data: PipelineData, output_format="mp3"):
     Args:
         data (PipelineData): The pipeline data object.
         output_format (str): The desired output format (default: "mp3").
+
+    Returns:
+        PipelineData: Updated data object with the merged audio path.
     """
     intro_path = os.path.abspath(data.intro_file_path)
     main_path = os.path.abspath(data.active_file_path)
@@ -25,7 +28,6 @@ def merge_audio_step(data: PipelineData, output_format="mp3"):
     for path in [intro_path, main_path, outro_path]:
         base, ext = os.path.splitext(path)
         normalized_path = f"{base}_normalized.{output_format}"
-        # normalize_audio(path, normalized_path)
         normalize_audio(
             str(path),
             str(normalized_path),

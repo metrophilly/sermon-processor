@@ -1,4 +1,3 @@
-# app/constants.py
 class PipelineKeys:
     YOUTUBE_URL = "youtube_url"
     MAIN_FILE_PATH = "main_file_path"

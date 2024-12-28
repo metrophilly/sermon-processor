@@ -30,12 +30,12 @@ class DownloaderProxy:
             # Fallback to the base cache path if `get_output_path` is not available
             expected_path = cache_path
 
-        # Check if the file already exists
+        # If the file already exists, just use that filepath...
         if os.path.exists(expected_path):
             print(f"Using cached file for {url}: {expected_path}")
             return expected_path
 
-        # Download if not cached
+        # ...but if it doesn't, then actually download the file
         print(f"Downloading {url} to cache...")
         downloaded_path = self.real_downloader.download(url, cache_path)
         print(f"Downloaded and cached: {downloaded_path}")
