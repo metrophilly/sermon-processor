@@ -7,7 +7,7 @@ def main():
         os.system("python3 scripts/run_video_pipeline.py")
     if choice == "a" or choice == "audio":
         os.system("python3 scripts/run_audio_pipeline.py")
-    elif choice == "v" or choice == "both":
+    elif choice == "b" or choice == "both":
         os.system("python3 scripts/run_audio_pipeline.py")
         os.system("python3 scripts/run_video_pipeline.py")
 
