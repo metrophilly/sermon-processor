@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  sermon-processor:
+    image: sermon-processor:1.0.0
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../cache:/usr/src/app/cache
+      - ../output:/usr/src/app/output
+    stdin_open: true
+    tty: true
+
+  tests:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      target: test
+    volumes:
+      - ../cache:/usr/src/app/cache
+      - ../output:/usr/src/app/output
+    command: pytest tests/

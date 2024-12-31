@@ -1,69 +1,101 @@
 # 🎛️ Metro Sermons Processor
 
-This is a small script to automate the downloading, processing, and scrubbing of
-Metro's weekly sermons from YouTube and audio of Spotify. This guide will walk
-you through setting up `sermon-processor` project using Docker.
+## tl;dr
 
-## Prerequisites
+1. set `config/pipeline_config.json`
+2. run `make run`
+3. check `output/` for processed files
 
-Ensure you have `docker` and `docker-compose` installed on your system. You can
-check if they're installed by running:
+## Configuration
 
-```bash
-docker --version
-docker-compose --version
-```
+`config/pipeline_config.json` is the main config file needed to run this thing.
 
-## Set config parameters
+- run the following to copy the example config to get the structure:
+  - `cp config/pipeline_config.json.example config/pipeline_config.json`
+- then update file with actual configurations (ask paul for now—will add to
+  bitwarden vault when done)
 
-The `.env` file allows for pre-filled parameters. If you don't have it, run the
-following command to use the provided template. Please reference the Bitwarden
-Vault for keys
+## Running
 
-```bash
-cp .env.example .env
-```
+Run scripts are based out of the `Makefile` (make sure you have Docker running
+in the background)
 
-Ensure that you have the `url`, `start`, and `end` params set to run the script.
+- to run:
+  - `make run`
+- to run just audio processing:
+  - `make run-audio`
+- to run just video processing:
+  - `make run-video`
+- to run both sequentially:
+  - `make run-both`
 
-## Run the script
+## Testing
 
-1. Ensure that you have Docker Desktop running in the background.,
+All tests are held in `tests/`, and are run through `pytest`
 
-2. Run the start command from the Makefile:
+- to run all tests:
+  - `make test`
+- to run a single test:
+  - `make test TEST_FILE=test_filename.py`
 
-```bash
-make run
-```
+## 🌊 General flow
 
-## Run tests
+### Startup & Docker
 
-```bash
-make test
-```
+1. Running `make run` looks in the `Makefile` and runs the `run` command
+2. `make run` kicks off `docker-compose`, which builds a container based of the
+   `Dockerfile`
+3. The running container calls the startup script at `scripts/startup.py`
 
-## Post-Processing
+### Audio Processing
 
-To ensure the correct media file is generated each week, it is essential to
-delete the `tmp` directory after the current media file has been successfully
-created. If the `tmp` directory is not deleted, next week’s media file will use
-the previous week’s data instead of generating a new file.
+Selecting to process the audio kicks off `scripts/run_audio_pipeline.py`, which:
 
-Delete the `tmp` directory by either:
+1. Validates that the config file is correct which builds the main audio
+2. Creates the PipeLineData dataclass, which is the main object that tracks the
+   paths of the different intermediate steps of the pipeline
+3. Calls `app/pipelines/audio_pipeline.py` which is the meat of the
+   processing—`create_audio_pipeline()` composes and returns a pipeline made of
+   discrete "steps" (found in `app/steps/`) that will iteratively run and
+   process the piece of content as we need.
 
-- Manually deleting the folder
-- Running the command `rm -r tmp` in your terminal
+### DownloaderProxy & Caching
 
-Once the automated processing is complete, the final media file will be saved to
-`data/` by default, or the specified data directory on your host machine.
-Afterwards, follow the manual steps that print in the console.
+One problem that we had was re-running the script, only to download the same
+files we already had all over again. In order to solve this, we created
+`app/downloaders/downloader_proxy.py`. What this does is, during the downloading
+step, before we actually download the file, we predict what the resulting output
+filepath is going to be, and if it already exists, we just use that filepath,
+and skip the download. This should save us a bunch of time on script re-runs.
 
-## Deactivating Docker Container
+`app/cache/` holds the downloaded and intermediary files.
 
-When you're done, the Docker container will automatically stop as we've used the
-`--rm` flag, which removes the container after it exits. If you'd like to
-manually stop the image, you can run the following:
+### `ffmpeg` Flag Notes
 
-```bash
-docker-compose down
-```
+`ffmpeg` is the main file processing engine. To run it in the different steps,
+we construct a string array of commands and flags, then call it directly as a
+system subprocess. In the constructed flags the following are useful to know:
+
+- `-crf` - Constant Rate Factor
+  - usually set to: 16
+  - "The range of the quantizer scale is 0-51: where 0 is lossless, 23 is
+    default, and 51 is worst possible. A lower value is a higher quality and a
+    subjectively sane range is 18-28. Consider 18 to be visually lossless or
+    nearly so: it should look the same or nearly the same as the input but it
+    isn't technically lossless."
+- `-preset`
+  - usually set to: ultrafast
+  - "These presets affect the encoding speed. Using a slower preset gives you
+    better compression, or quality per filesize, whereas faster presets give you
+    worse compression. In general, you should just use the preset you can afford
+    to wait for. Presets can be ultrafast, superfast, veryfast, faster, fast,
+    medium (default), slow and veryslow."
+
+We've set the default to `crf=16` and `preset=ultrafast` because we're ok with
+the larger resultant filesize, as we're generally just going to upload it to
+youtube and then delete it.
+
+### Output
+
+After the pipeline runs, check the `output/{stream_id}/` dir for the finished
+file (`stream_id` is whatever you set in the config file)

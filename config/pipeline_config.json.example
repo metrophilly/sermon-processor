@@ -1,0 +1,20 @@
+{
+  "youtube_url": "https://www.youtube.com/watch?v=example",
+  "stream_id": "sermon",
+  "audio": {
+    "intro_url": "https://s3.example.com/audio_intro.mp3",
+    "outro_url": "https://s3.example.com/audio_outro.mp3",
+    "trim": {
+      "start_time": "00:00:10",
+      "end_time": "00:00:20"
+    }
+  },
+  "video": {
+    "intro_url": "https://s3.example.com/video_intro.mp4",
+    "outro_url": "https://s3.example.com/video_outro.mp4",
+    "trim": {
+      "start_time": "00:00:30",
+      "end_time": "00:00:40"
+    }
+  }
+}
