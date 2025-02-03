@@ -29,6 +29,42 @@ in the background)
 - to run both sequentially:
   - `make run-both`
 
+## Bypassing the Youtube downloader
+
+There are times when the script will fail at the 'Downloading Youtube' step. In
+order to sidestep this, follow these steps:
+
+1. Download the audio and videofile on your own, and add it to the `cache`
+   folder.
+
+   - Helper scripts:
+     - my audio download one-liner:
+       `yt-dlp -f "bestaudio" -x --audio-format m4a -o "%(upload_date>%Y-%m-%d)s.%(ext)s" "https://youtube.com/live/g0jKUy1hV4w"`
+     - my video download one-liner:
+       `yt-dlp -f "bestvideo+bestaudio/best" -o "%(upload_date>%Y-%m-%d)s.mp4" --merge-output-format mp4 "https://youtube.com/live/g0jKUy1hV4w"`
+
+2. In `config/pipeline_config.json`, flip the `manual_download` boolean to
+   `true`, and add in the appropriate paths to the files to the `manual_path`
+   fields.
+
+   - eg: In `config/pipeline_config.json`:
+
+     ```
+     {
+         ...
+         "manual_download": false,
+         ...
+         "audio": {
+             "manual_path": "cache/audio/2025-02-02.m4a",
+             ...
+         },
+         "video": {
+             "manual_path": "cache/video/2025-02-02.mp4",
+             ...
+         }
+     }
+     ```
+
 ## Testing
 
 All tests are held in `tests/`, and are run through `pytest`

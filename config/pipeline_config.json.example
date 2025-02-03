@@ -1,7 +1,9 @@
 {
   "youtube_url": "https://www.youtube.com/watch?v=example",
+  "manual_download": false,
   "stream_id": "sermon",
   "audio": {
+    "manual_path": "cache/audio/2025-02-02.m4a",
     "intro_url": "https://s3.example.com/audio_intro.mp3",
     "outro_url": "https://s3.example.com/audio_outro.mp3",
     "trim": {
@@ -10,6 +12,7 @@
     }
   },
   "video": {
+    "manual_path": "cache/video/2025-02-02.mp4",
     "intro_url": "https://s3.example.com/video_intro.mp4",
     "outro_url": "https://s3.example.com/video_outro.mp4",
     "trim": {

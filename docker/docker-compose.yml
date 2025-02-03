@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   sermon-processor:
     image: sermon-processor:1.0.0
