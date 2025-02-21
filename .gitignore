@@ -9,3 +9,5 @@ config/pipeline_config.json
 cache/
 output/
 tests/logs
+
+/venv

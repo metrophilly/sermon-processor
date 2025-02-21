@@ -6,6 +6,7 @@ from app.downloaders.downloader_proxy import DownloaderProxy
 from app.steps.delete_files_step import delete_files_step
 from app.steps.download_step import download_step
 from app.steps.fade_in_out_step import fade_in_out_step
+from app.steps.manual_load_step import manual_load_step
 from app.steps.trim_step import trim_step
 from app.steps.merge_audio_step import merge_audio_step
 from app.steps.move_step import move_step
@@ -18,6 +19,7 @@ def create_audio_pipeline(config):
     """
     stream_id = config.get("stream_id", "default-audio-stream")
     audio_conf = config.get("audio", {})
+    IS_MANUAL_DOWNLOAD = config.get("manual_download", False)
 
     youtube_url = config.get("youtube_url")
     if youtube_url:
@@ -65,58 +67,75 @@ def create_audio_pipeline(config):
                 else data
             ),
         ),
-        (
-            "Download YouTube audio",
-            lambda data: download_step(
-                data,
-                downloader=audio_proxy,
-                url=config.get("youtube_url"),
-                filename="audio.%(ext)s",
-                key=PipelineKeys.MAIN_FILE_PATH,
-                date=date,
-                stream_id=stream_id,
-            ),
-        ),
-        (
-            "Trim audio",
-            lambda data: (
-                trim_step(
-                    data,
-                    start_time=audio_conf.get("trim", {}).get("start_time"),
-                    end_time=audio_conf.get("trim", {}).get("end_time"),
-                    ffmpeg_hide_banner=True,
-                )
-                if "trim" in audio_conf
-                else data
-            ),
-        ),
-        (
-            "Apply fade-in/out",
-            lambda data: fade_in_out_step(
-                data, fade_duration=1, ffmpeg_loglevel="info", is_video=False
-            ),
-        ),
-        (
-            "Merge audio",
-            lambda data: merge_audio_step(data, output_format="wav"),
-        ),
-        (
-            "Move final audio",
-            lambda data: move_step(
-                data,
-                source_key=PipelineKeys.ACTIVE_FILE_PATH,
-                output_filename=f"output/{stream_id}/{date}.wav",
-            ),
-        ),
-        (
-            "Delete intermediate files",
-            lambda data: delete_files_step(
-                data,
-                file_keys=[
-                    PipelineKeys.INTERMEDIATE_FILES,
-                ],
-            ),
-        ),
     ]
+
+    if IS_MANUAL_DOWNLOAD:
+        manual_path = audio_conf.get("manual_path")
+        steps.append(
+            (
+                "Load manually downloaded audio",
+                lambda data: manual_load_step(data, manual_path=manual_path),
+            )
+        )
+    else:
+        steps.append(
+            (
+                "Download YouTube audio",
+                lambda data: download_step(
+                    data,
+                    downloader=audio_proxy,
+                    url=config.get("youtube_url"),
+                    filename="audio.%(ext)s",
+                    key=PipelineKeys.MAIN_FILE_PATH,
+                    date=date,
+                    stream_id=stream_id,
+                ),
+            )
+        )
+
+    steps.extend(
+        [
+            (
+                "Trim audio",
+                lambda data: (
+                    trim_step(
+                        data,
+                        start_time=audio_conf.get("trim", {}).get("start_time"),
+                        end_time=audio_conf.get("trim", {}).get("end_time"),
+                        ffmpeg_hide_banner=True,
+                    )
+                    if "trim" in audio_conf
+                    else data
+                ),
+            ),
+            (
+                "Apply fade-in/out",
+                lambda data: fade_in_out_step(
+                    data, fade_duration=1, ffmpeg_loglevel="info", is_video=False
+                ),
+            ),
+            (
+                "Merge audio",
+                lambda data: merge_audio_step(data, output_format="wav"),
+            ),
+            (
+                "Move final audio",
+                lambda data: move_step(
+                    data,
+                    source_key=PipelineKeys.ACTIVE_FILE_PATH,
+                    output_filename=f"output/{stream_id}/{date}.wav",
+                ),
+            ),
+            (
+                "Delete intermediate files",
+                lambda data: delete_files_step(
+                    data,
+                    file_keys=[
+                        PipelineKeys.INTERMEDIATE_FILES,
+                    ],
+                ),
+            ),
+        ]
+    )
 
     return steps

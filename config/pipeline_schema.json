@@ -8,6 +8,10 @@
       "format": "uri",
       "description": "The YouTube URL for audio/video pipeline."
     },
+    "manual_download": {
+      "type": "boolean",
+      "description": "Toggle to use the manually downloaded files."
+    },
     "stream_id": {
       "type": "string",
       "description": "An optional, human-readable identifier for this stream."
@@ -16,6 +20,10 @@
       "type": "object",
       "description": "Configuration for the audio-only pipeline (intro, outro, trim).",
       "properties": {
+        "manual_path": {
+          "type": "string",
+          "description": "The path to the manually downloaded audio file."
+        },
         "intro_url": {
           "type": "string",
           "format": "uri",
@@ -51,6 +59,10 @@
       "type": "object",
       "description": "Configuration for the video+audio pipeline (intro, outro, trim).",
       "properties": {
+        "manual_path": {
+          "type": "string",
+          "description": "The path to the manually downloaded video file."
+        },
         "intro_url": {
           "type": "string",
           "format": "uri",
@@ -83,6 +95,20 @@
       "additionalProperties": false
     }
   },
-  "required": ["youtube_url"],
-  "additionalProperties": false
+  "required": ["youtube_url", "manual_download"],
+  "additionalProperties": false,
+  "if": {
+    "properties": { "manual_download": { "const": true } }
+  },
+  "then": {
+    "required": ["audio", "video"],
+    "properties": {
+      "audio": {
+        "required": ["manual_path"]
+      },
+      "video": {
+        "required": ["manual_path"]
+      }
+    }
+  }
 }

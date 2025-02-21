@@ -7,6 +7,7 @@ from app.downloaders.downloader_proxy import DownloaderProxy
 from app.steps.delete_files_step import delete_files_step
 from app.steps.download_step import download_step
 from app.steps.fade_in_out_step import fade_in_out_step
+from app.steps.manual_load_step import manual_load_step
 from app.steps.merge_video_step import merge_video_step
 from app.steps.move_step import move_step
 from app.steps.trim_step import trim_step
@@ -19,6 +20,7 @@ def create_video_pipeline(config):
     """
     stream_id = config.get("stream_id", "default-audio-stream")
     video_conf = config.get("video", {})
+    IS_MANUAL_DOWNLOAD = config.get("manual_download", False)
 
     youtube_url = config.get("youtube_url")
     if youtube_url:
@@ -66,64 +68,81 @@ def create_video_pipeline(config):
                 else data
             ),
         ),
-        (
-            "Download YouTube video",
-            lambda data: download_step(
-                data,
-                downloader=video_proxy,
-                url=config.get("youtube_url"),
-                filename="video.%(ext)s",
-                key=PipelineKeys.MAIN_FILE_PATH,
-                date=date,
-                stream_id=stream_id,
-            ),
-        ),
-        (
-            "Trim video",
-            lambda data: (
-                trim_step(
+    ]
+
+    if IS_MANUAL_DOWNLOAD:
+        manual_path = video_conf.get("manual_path")
+        steps.append(
+            (
+                "Load manually downloaded audio",
+                lambda data: manual_load_step(data, manual_path=manual_path),
+            )
+        )
+    else:
+        steps.append(
+            (
+                "Download YouTube video",
+                lambda data: download_step(
                     data,
-                    start_time=video_conf.get("trim", {}).get("start_time"),
-                    end_time=video_conf.get("trim", {}).get("end_time"),
+                    downloader=video_proxy,
+                    url=config.get("youtube_url"),
+                    filename="video.%(ext)s",
+                    key=PipelineKeys.MAIN_FILE_PATH,
+                    date=date,
+                    stream_id=stream_id,
+                ),
+            ),
+        )
+
+    steps.extend(
+        [
+            (
+                "Trim video",
+                lambda data: (
+                    trim_step(
+                        data,
+                        start_time=video_conf.get("trim", {}).get("start_time"),
+                        end_time=video_conf.get("trim", {}).get("end_time"),
+                        ffmpeg_loglevel="info",
+                        ffmpeg_hide_banner=True,
+                    )
+                    if "trim" in video_conf
+                    else data
+                ),
+            ),
+            (
+                "Apply fade-in/out",
+                lambda data: fade_in_out_step(
+                    data, fade_duration=1, ffmpeg_loglevel="info", is_video=True
+                ),
+            ),
+            (
+                "Merge clips",
+                lambda data: merge_video_step(
+                    data,
+                    output_format="mp4",
                     ffmpeg_loglevel="info",
                     ffmpeg_hide_banner=True,
-                )
-                if "trim" in video_conf
-                else data
+                ),
             ),
-        ),
-        (
-            "Apply fade-in/out",
-            lambda data: fade_in_out_step(
-                data, fade_duration=1, ffmpeg_loglevel="info", is_video=True
+            (
+                "Move final video to output dir",
+                lambda data: move_step(
+                    data,
+                    source_key=PipelineKeys.ACTIVE_FILE_PATH,
+                    output_filename=f"output/{stream_id}/{date}.mp4",
+                ),
             ),
-        ),
-        (
-            "Merge clips",
-            lambda data: merge_video_step(
-                data,
-                output_format="mp4",
-                ffmpeg_loglevel="info",
-                ffmpeg_hide_banner=True,
+            (
+                "Delete intermediate files",
+                lambda data: delete_files_step(
+                    data,
+                    file_keys=[
+                        PipelineKeys.INTERMEDIATE_FILES,
+                    ],
+                ),
             ),
-        ),
-        (
-            "Move final video to output dir",
-            lambda data: move_step(
-                data,
-                source_key=PipelineKeys.ACTIVE_FILE_PATH,
-                output_filename=f"output/{stream_id}/{date}.mp4",
-            ),
-        ),
-        (
-            "Delete intermediate files",
-            lambda data: delete_files_step(
-                data,
-                file_keys=[
-                    PipelineKeys.INTERMEDIATE_FILES,
-                ],
-            ),
-        ),
-    ]
+        ]
+    )
 
     return steps
