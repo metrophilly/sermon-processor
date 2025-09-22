@@ -1,41 +1,26 @@
-from datetime import datetime
 import sys
-from app.data_models.pipeline_data import PipelineData
-from scripts.config_loader import load_and_validate_config
+from app.core import run_pipeline
 from app.pipelines.audio_pipeline import create_audio_pipeline
-from colorama import Fore, Style
 
 
 def main(
     config_path="config/pipeline_config.json", schema_path="config/pipeline_schema.json"
 ):
-    config = load_and_validate_config(config_file=config_path, schema_file=schema_path)
-    data = PipelineData()
+    """
+    Run the audio processing pipeline.
 
-    pipeline = create_audio_pipeline(config)
-    start_time = datetime.now()
+    Args:
+        config_path: Path to the configuration file
+        schema_path: Path to the configuration schema file
 
-    for description, step_fn in pipeline:
-        step_start_time = datetime.now()
-        print(Fore.YELLOW + "===")
-        print(f"Starting step: " + Fore.GREEN + f"{description}" + Style.RESET_ALL)
-
-        # execute the pipeline step
-        data = step_fn(data)
-
-        step_end_time = datetime.now()
-        step_elapsed_time = step_end_time - step_start_time
-        print(Fore.YELLOW + f"Completed step: " + Fore.GREEN + f"{description}")
-        print(Fore.GREEN + f"Step elapsed time: {step_elapsed_time}" + Fore.YELLOW)
-        print("===" + Style.RESET_ALL)
-
-    end_time = datetime.now()
-    elapsed_time = end_time - start_time
-
-    print(Fore.YELLOW + f"Audio pipeline complete: {data}")
-    print(Fore.GREEN + f"Total elapsed time: {elapsed_time}" + Style.RESET_ALL)
-
-    return data
+    Returns:
+        PipelineData: The final pipeline data after execution
+    """
+    return run_pipeline(
+        pipeline_factory=create_audio_pipeline,
+        config_path=config_path,
+        schema_path=schema_path,
+    )
 
 
 if __name__ == "__main__":
