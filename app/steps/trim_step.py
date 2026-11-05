@@ -4,7 +4,7 @@ import subprocess
 from app.data_models.pipeline_data import PipelineData
 from app.constants import PipelineKeys
 from app.utils.helpers import add_intermediate_filepath
-from app.utils.paths import file_ext
+from app.utils.paths import file_ext, tagged_path
 
 
 def trim_step(
@@ -22,15 +22,15 @@ def trim_step(
     if not input_file:
         raise ValueError(f"No input file found for {file_key}")
 
-    ext = file_ext(input_file)
-    output_file = input_file.replace(ext, f"_trimmed{ext}")
+    file_ext(input_file)  # validates the file exists and has an extension
+    output_file = tagged_path(input_file, "_trimmed")
 
     if os.path.exists(output_file) and not overwrite:
         print(f"Output file already exists: {output_file}. Skipping trim step.")
         setattr(data, file_key, output_file)
         return data
 
-    command = ["ffmpeg", "-loglevel", ffmpeg_loglevel]
+    command = ["ffmpeg", "-y", "-loglevel", ffmpeg_loglevel]
     if ffmpeg_hide_banner:
         command.extend(["-hide_banner"])
 

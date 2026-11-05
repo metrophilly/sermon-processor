@@ -53,6 +53,7 @@ def test_trim_step_success_audio(
     # Assert
     expected_command = [
         "ffmpeg",
+        "-y",
         "-loglevel",
         "info",
         "-i",
@@ -93,6 +94,7 @@ def test_trim_step_overwrite(pipeline_data, mock_subprocess_run, mock_os_path_ex
     # Assert
     expected_command = [
         "ffmpeg",
+        "-y",
         "-loglevel",
         "info",
         "-i",

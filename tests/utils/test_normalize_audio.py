@@ -20,6 +20,7 @@ def test_normalize_audio_success(mock_run, dummy_audio_file):
     mock_run.assert_called_once_with(
         [
             "ffmpeg",
+            "-y",
             "-loglevel",
             "info",
             "-i",

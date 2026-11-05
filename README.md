@@ -95,6 +95,19 @@ Selecting to process the audio kicks off `scripts/run_audio_pipeline.py`, which:
    discrete "steps" (found in `app/steps/`) that will iteratively run and
    process the piece of content as we need.
 
+The audio pipeline's processing is a single step,
+`app/steps/render_audio_step.py`. One `ffmpeg` run trims the sermon, fades it
+in and out, loudness-normalizes the intro, sermon and outro, and joins them. It
+writes no intermediate files, so a failed run can't leave anything behind that
+breaks the next one.
+
+- The sermon can be any format `ffmpeg` can read (wav, mp3, m4a, ...). Drop it
+  in `cache/audio/` and point `audio.manual_path` at it.
+- `audio.output_format` is `wav` (default) or `mp3`.
+- Bad input fails fast with a readable message: a missing or corrupt file, no
+  audio stream, or trim times past the end of the file.
+- Video still uses the older trim, fade and merge steps.
+
 ### DownloaderProxy & Caching
 
 One problem that we had was re-running the script, only to download the same

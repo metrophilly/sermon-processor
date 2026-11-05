@@ -202,6 +202,9 @@ class BasePipelineBuilder:
         Returns:
             Tuple of (step_description, step_function)
         """
+        # Always re-trim inside a pipeline run. Skipping because a *_trimmed file
+        # exists would silently reuse a previous sermon's trim.
+        kwargs.setdefault("overwrite", True)
         return (
             f"Trim {self.media_type}",
             lambda data: (

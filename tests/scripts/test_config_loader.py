@@ -9,6 +9,7 @@ class TestConfigLoader(unittest.TestCase):
         self.sample_json_path = "tests/sample_pipeline_config.json"
         self.sample_config = {
             "youtube_url": "https://www.youtube.com/watch?v=example",
+            "manual_download": False,
             "stream_id": "my-weekly-sermon",
             "audio": {
                 "intro_url": "https://s3.example.com/audio_intro.mp3",

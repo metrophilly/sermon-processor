@@ -50,6 +50,7 @@ def merge_audio_step(data: PipelineData, output_format="mp3"):
 
     command = [
         "ffmpeg",
+        "-y",
         "-f",
         "concat",
         "-safe",

@@ -1,5 +1,5 @@
 from app.pipelines.base_pipeline import BasePipelineBuilder
-from app.steps.merge_audio_step import merge_audio_step
+from app.steps.render_audio_step import render_audio_step
 
 
 class AudioPipelineBuilder(BasePipelineBuilder):
@@ -38,18 +38,22 @@ class AudioPipelineBuilder(BasePipelineBuilder):
                 )
             )
 
-        # Add processing steps
+        # Add processing steps: one ffmpeg run does trim + fade + normalize + join
+        trim = audio_conf.get("trim", {})
+        output_format = audio_conf.get("output_format", "wav")
         steps.extend(
             [
-                self._create_trim_step(audio_conf, ffmpeg_hide_banner=True),
-                self._create_fade_step(
-                    fade_duration=1, ffmpeg_loglevel="info", is_video=False
-                ),
                 (
-                    "Merge audio",
-                    lambda data: merge_audio_step(data, output_format="wav"),
+                    "Render audio (trim, fade, normalize, add intro/outro)",
+                    lambda data: render_audio_step(
+                        data,
+                        start_time=trim.get("start_time"),
+                        end_time=trim.get("end_time"),
+                        output_format=output_format,
+                        fade_duration=1,
+                    ),
                 ),
-                self._create_move_step(stream_id, date, "wav"),
+                self._create_move_step(stream_id, date, output_format),
                 self._create_cleanup_step(),
             ]
         )

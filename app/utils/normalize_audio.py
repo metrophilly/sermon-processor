@@ -25,6 +25,7 @@ def normalize_audio(
 
     command = [
         "ffmpeg",
+        "-y",
         "-loglevel",
         ffmpeg_loglevel,
         "-i",

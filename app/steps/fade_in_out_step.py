@@ -3,7 +3,7 @@ import subprocess
 from app.constants import PipelineKeys
 from app.data_models.pipeline_data import PipelineData
 from app.utils.helpers import add_intermediate_filepath
-from app.utils.paths import file_ext
+from app.utils.paths import audio_codec_for, file_ext, tagged_path
 
 
 def fade_in_out_step(
@@ -26,7 +26,8 @@ def fade_in_out_step(
         raise ValueError(f"No input file found for {file_key}")
 
     ext = file_ext(input_path)
-    output_path = input_path.replace(ext, f"_faded{ext}")
+    output_path = tagged_path(input_path, "_faded")
+    audio_codec, audio_bitrate = audio_codec_for(ext)
 
     # Get the video duration
     probe_command = [
@@ -48,6 +49,7 @@ def fade_in_out_step(
     # fading the audio
     command = [
         "ffmpeg",
+        "-y",
         "-loglevel",
         ffmpeg_loglevel,
         "-hide_banner",
@@ -56,10 +58,10 @@ def fade_in_out_step(
         "-af",
         f"afade=t=in:st=0:d={fade_duration},afade=t=out:st={fade_out_start}:d={fade_duration}",
         "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
+        audio_codec,
     ]
+    if audio_bitrate:
+        command.extend(["-b:a", audio_bitrate])
 
     # just fading the video
     if is_video:

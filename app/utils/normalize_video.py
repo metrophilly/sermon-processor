@@ -32,6 +32,7 @@ def normalize_video(
     # Construct the ffmpeg command
     command = [
         "ffmpeg",
+        "-y",
         "-loglevel",
         ffmpeg_loglevel,
         "-hide_banner",

@@ -57,7 +57,7 @@ def merge_video_step(
     # Determine output file name dynamically
     output_file = f"{base}_merged.{output_format}"
 
-    command = ["ffmpeg", "-loglevel", ffmpeg_loglevel]
+    command = ["ffmpeg", "-y", "-loglevel", ffmpeg_loglevel]
     if ffmpeg_hide_banner:
         command.append("-hide_banner")
     command.extend(

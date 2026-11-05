@@ -22,7 +22,13 @@
       "properties": {
         "manual_path": {
           "type": "string",
-          "description": "The path to the manually downloaded audio file."
+          "description": "The path to the manually downloaded audio file. Any format ffmpeg can read (wav, mp3, m4a, ...)."
+        },
+        "output_format": {
+          "type": "string",
+          "enum": ["wav", "mp3"],
+          "default": "wav",
+          "description": "Format of the finished audio file."
         },
         "intro_url": {
           "type": "string",
