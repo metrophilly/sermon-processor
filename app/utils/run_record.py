@@ -39,9 +39,22 @@ def write_run_record(output_path, record):
     record.setdefault("ffmpeg", _ffmpeg_version())
     path = f"{os.path.splitext(output_path)[0]}.json"
     with open(path, "w") as handle:
-        json.dump(record, handle, indent=2)
+        json.dump(record, handle, indent=2, default=_plain)
         handle.write("\n")
     return path
+
+
+def _plain(value):
+    """
+    Turns values JSON can't store into plain ones: NumPy numbers and booleans
+    (anything with .item()), sets and tuples. Anything else becomes its text, so
+    saving a record can never crash a run that has already produced the audio.
+    """
+    if hasattr(value, "item"):
+        return value.item()
+    if isinstance(value, (set, tuple)):
+        return list(value)
+    return str(value)
 
 
 def describe_input(path):

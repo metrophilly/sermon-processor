@@ -227,9 +227,15 @@ def _transcribe_local(audio_path, duration, progress, bar=None):
     if bar:
         bar(0.0)
     for item in iterator:
-        words = [Word(w.start, w.end, w.word.strip()) for w in (item.words or [])]
-        segments.append(Segment(item.start, item.end, item.text.strip(), words))
-        fraction = item.end / duration if duration else 0.0
+        # faster-whisper hands back NumPy numbers; keep plain Python floats so
+        # comparisons give real bools and everything can be saved as JSON.
+        words = [
+            Word(float(w.start), float(w.end), w.word.strip()) for w in (item.words or [])
+        ]
+        segments.append(
+            Segment(float(item.start), float(item.end), item.text.strip(), words)
+        )
+        fraction = float(item.end) / duration if duration else 0.0
         if bar:
             bar(fraction)
             continue

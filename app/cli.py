@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import time
+import traceback
 
 from app.data_models.pipeline_data import PipelineData
 from app.steps.render_audio_step import (
@@ -305,7 +306,9 @@ def run_audio(args, input_fn=input, print_fn=print):
             "warnings": suggestion.warnings,
             "alternatives": suggestion.alternatives,
             "model": suggestion.model,
-            "adjusted_by_you": (abs(start - suggestion.start) > 0.01 or abs(end - suggestion.end) > 0.01),
+            "adjusted_by_you": bool(
+                abs(start - suggestion.start) > 0.01 or abs(end - suggestion.end) > 0.01
+            ),
         },
         "intro_url": settings.get("intro_url"),
         "outro_url": settings.get("outro_url"),
@@ -317,10 +320,14 @@ def run_audio(args, input_fn=input, print_fn=print):
         "output_seconds": probe_audio_duration(output_path),
         "render_elapsed_seconds": round(time.time() - started, 1),
     }
-    record_path = write_run_record(output_path, record)
+    try:
+        record_path = write_run_record(output_path, record)
+    except Exception as error:  # the audio is already made; never lose that to a bookkeeping file
+        record_path = None
+        print_fn(f"\nNote: the audio was made, but the run record could not be saved ({error}).")
 
     print_fn("Done:")
-    for path in planned_outputs + [record_path]:
+    for path in planned_outputs + ([record_path] if record_path else []):
         label = {"wav": "edit in Audacity", "mp3": "ready to use", "json": "record for reruns"}[
             os.path.splitext(path)[1].lstrip(".")
         ]
@@ -387,6 +394,18 @@ def main(argv=None, input_fn=input, print_fn=print):
         detail = (error.output or "").strip() or "no details"
         print_fn(f"\nffmpeg failed:\n{detail}")
         notify("Sermon audio failed", "ffmpeg reported an error")
+        return 1
+    except Exception as error:  # a bug: say so plainly and keep the details
+        log_path = os.path.join(CACHE_DIR, "last-error.log")
+        try:
+            os.makedirs(CACHE_DIR, exist_ok=True)
+            with open(log_path, "w") as handle:
+                handle.write(traceback.format_exc())
+            where = f" Details were saved to {log_path}."
+        except OSError:
+            where = ""
+        print_fn(f"\nSomething unexpected went wrong: {type(error).__name__}: {error}.{where}")
+        notify("Sermon audio failed", f"{type(error).__name__}: {error}"[:100])
         return 1
 
 

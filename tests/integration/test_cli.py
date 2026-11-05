@@ -178,6 +178,61 @@ def test_auto_trim_is_used_and_recorded(env, monkeypatch):
     assert _duration(tmp_path / "out" / "sermon" / "2026-11-01.wav") == pytest.approx(20, abs=0.3)
 
 
+def test_numpy_numbers_in_a_suggestion_do_not_break_the_run(env, monkeypatch):
+    numpy = pytest.importorskip("numpy")
+    tmp_path, source = env
+    monkeypatch.setattr(
+        cli, "suggest_trim",
+        lambda *a, **k: _fake_suggestion(start=numpy.float64(5.0), end=numpy.float64(25.0)),
+    )
+
+    assert _run(tmp_path, source, "--date", "2026-11-01", "-y") == 0
+
+    record = json.loads((tmp_path / "out" / "sermon" / "2026-11-01.json").read_text())
+    assert record["auto_trim"]["adjusted_by_you"] is False
+    assert record["trim"]["start"] == 5.0
+
+
+def test_a_record_that_cannot_be_saved_does_not_lose_the_audio(env, monkeypatch):
+    tmp_path, source = env
+    monkeypatch.setattr(cli, "write_run_record", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+    lines = []
+
+    code = cli.main(
+        ["audio", str(source), "--output-dir", str(tmp_path / "out"),
+         "--config", str(tmp_path / "none.json"), "--no-open",
+         "--start", "0:05", "--end", "0:25", "--date", "2026-11-01", "-y"],
+        print_fn=lines.append,
+    )
+
+    folder = tmp_path / "out" / "sermon"
+    assert code == 0  # the audio is made, so the run succeeds
+    assert (folder / "2026-11-01.wav").exists() and (folder / "2026-11-01.mp3").exists()
+    text = "\n".join(lines)
+    assert "run record could not be saved" in text and "disk full" in text
+    assert "Done:" in text and "ready to use" in text
+
+
+def test_an_unexpected_error_is_explained_and_logged_not_a_traceback(env, monkeypatch):
+    tmp_path, source = env
+    monkeypatch.setattr(cli, "render_audio_step", lambda *a, **k: {}["missing"])
+    lines = []
+
+    code = cli.main(
+        ["audio", str(source), "--output-dir", str(tmp_path / "out"),
+         "--config", str(tmp_path / "none.json"), "--no-open",
+         "--start", "0:05", "--end", "0:25", "-y"],
+        print_fn=lines.append,
+    )
+
+    assert code == 1
+    text = "\n".join(lines)
+    assert "Something unexpected went wrong: KeyError" in text
+    log = tmp_path / "cache" / "last-error.log"
+    assert "Traceback" in log.read_text() and "KeyError" in log.read_text()
+    assert "Traceback" not in text  # the details are in the log, not on the screen
+
+
 def test_plan_only_shows_the_cuts_and_renders_nothing(env, monkeypatch):
     tmp_path, source = env
     monkeypatch.setattr(cli, "suggest_trim", lambda *a, **k: _fake_suggestion())
