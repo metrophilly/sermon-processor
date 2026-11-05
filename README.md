@@ -2,9 +2,67 @@
 
 ## tl;dr
 
-1. set `config/pipeline_config.json`
-2. run `make run`
-3. check `output/` for processed files
+1. set `config/pipeline_config.json` (once: it only needs the intro and outro
+   URLs for audio)
+2. run `python3 sermon audio ~/Downloads/service.m4a`
+3. listen to the two cuts, press Enter, and the finished file opens in Audacity
+
+The older `make run` flow (Docker, config-file driven) still works for video and
+for audio.
+
+## The `sermon audio` Command
+
+```
+python3 sermon audio <file>                          # finds the cuts for you
+python3 sermon audio <file> --start 43:40 --end 1:17:24
+```
+
+The file can be anywhere on your computer and any format ffmpeg reads (wav, mp3,
+m4a, ...). No need to put it in `cache/`.
+
+What happens:
+
+1. **Cuts.** With `--start`/`--end` it uses your times (`43:40`, `1:17:24` or
+   plain seconds). Without them it transcribes the recording and asks a language
+   model where the sermon starts and ends (see below).
+2. **Plan.** It prints the file, cuts, the exact words at each cut (in auto
+   mode), and where the output goes.
+3. **Listen.** It plays a few seconds around each cut. Press Enter to accept,
+   `r` to replay, `s 43:50` or `e 1:17:30` to move a cut, `q` to cancel. `-y`
+   skips this (and refuses to run unattended if an automatic cut is unverified).
+4. **Render.** One ffmpeg run trims, fades, matches loudness and adds the intro
+   and outro, with a progress bar.
+5. **Done.** A notification appears and the result opens in Audacity (or is
+   revealed in Finder/Explorer). Next to it is a `.json` record of exactly what
+   was done: input, cuts, the auto-trim's quotes, and the tool version.
+
+Other options: `--date 2026-11-01` (default: the most recent Sunday, or today if
+it is Sunday), `--format mp3`, `--fade 2`, `--no-open`, `--no-preview`.
+Results are never overwritten: a second run on the same date becomes
+`2026-11-01-2.wav`. Cached downloads and transcripts older than 28 days are
+deleted automatically (`--keep-days 0` to turn that off).
+
+### Automatic Trim
+
+Needs two things, each with a free and a hosted option. Nothing is sent anywhere
+unless you set it up.
+
+| Step | Free | Hosted |
+| --- | --- | --- |
+| Transcribe | `pip install faster-whisper` (runs on your computer; set `SERMON_WHISPER_MODEL`, default `base.en`) | set `GROQ_API_KEY` or `OPENAI_API_KEY` |
+| Find the cuts | the `claude` command (Claude Code) is used if installed | set `ANTHROPIC_API_KEY` |
+
+`SERMON_STT_PROVIDER` (`local`/`api`) and `SERMON_LLM_PROVIDER`
+(`anthropic`/`claude-cli`) force a choice. What counts as the start and end of
+the sermon is written in plain words in `config/trim_guidance.md`: edit that file
+to change it. The model must quote the exact words at each cut, and those words
+are checked against the transcript, so an invented answer is flagged instead of
+trusted.
+
+### Without Docker
+
+You need Python 3 and ffmpeg. `pip install -r requirements-optional.txt` adds a
+downloadable ffmpeg (useful on Windows) and the free transcriber.
 
 ## Configuration
 

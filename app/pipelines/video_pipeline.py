@@ -42,7 +42,9 @@ class VideoPipelineBuilder(BasePipelineBuilder):
         steps.extend(
             [
                 self._create_trim_step(
-                    video_conf, ffmpeg_loglevel="info", ffmpeg_hide_banner=True
+                    {"trim": config["trim"]} if "trim" in config else {},
+                    ffmpeg_loglevel="info",
+                    ffmpeg_hide_banner=True,
                 ),
                 self._create_fade_step(
                     fade_duration=1, ffmpeg_loglevel="info", is_video=True

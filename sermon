@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Run with:  python3 sermon audio <file>   (or ./sermon audio <file> on macOS/Linux)"""
+import os
+import sys
+
+# Make `app` importable from anywhere. Paths you type (the audio file) resolve
+# from your current folder; config, cache and output always use this project.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main())

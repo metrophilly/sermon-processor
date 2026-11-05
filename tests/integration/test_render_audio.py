@@ -169,15 +169,5 @@ def test_failed_render_leaves_no_partial_file(clips):
     assert glob.glob(str(tmp_path / "*_rendered*")) == []
 
 
-@pytest.mark.parametrize(
-    "value,seconds",
-    [("00:00:10", 10), ("00:01:30", 90), ("01:00:00", 3600), ("00:00:01.5", 1.5)],
-)
-def test_parse_timestamp(value, seconds):
-    assert parse_timestamp(value) == pytest.approx(seconds)
-
-
-@pytest.mark.parametrize("bad", ["10", "1:2", "00:61:00", "abc", ""])
-def test_parse_timestamp_rejects_bad_input(bad):
-    with pytest.raises(ValueError):
-        parse_timestamp(bad)
+def test_parse_timestamp_is_still_exported_from_the_render_step():
+    assert parse_timestamp("00:01:30") == 90

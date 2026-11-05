@@ -1,0 +1,10 @@
+# Optional extras for the `sermon` command. None are needed for manual
+# --start/--end runs when ffmpeg is already installed.
+
+# A private copy of ffmpeg + ffprobe, downloaded on first use. Handy on Windows,
+# where ffmpeg isn't installed by default.
+static-ffmpeg
+
+# Free, on-computer speech-to-text for automatic trim. Skip this if you use a
+# hosted service instead (set GROQ_API_KEY or OPENAI_API_KEY).
+faster-whisper

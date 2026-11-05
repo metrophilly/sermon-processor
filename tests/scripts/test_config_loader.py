@@ -11,15 +11,14 @@ class TestConfigLoader(unittest.TestCase):
             "youtube_url": "https://www.youtube.com/watch?v=example",
             "manual_download": False,
             "stream_id": "my-weekly-sermon",
+            "trim": {"start_time": "00:00:10", "end_time": "00:00:20"},
             "audio": {
                 "intro_url": "https://s3.example.com/audio_intro.mp3",
                 "outro_url": "https://s3.example.com/audio_outro.mp3",
-                "trim": {"start_time": "00:00:10", "end_time": "00:00:20"},
             },
             "video": {
                 "intro_url": "https://s3.example.com/video_intro.mp4",
                 "outro_url": "https://s3.example.com/video_outro.mp4",
-                "trim": {"start_time": "00:00:30", "end_time": "00:00:40"},
             },
         }
 
@@ -48,8 +47,8 @@ class TestConfigLoader(unittest.TestCase):
         self.assertEqual(
             config["audio"]["outro_url"], "https://s3.example.com/audio_outro.mp3"
         )
-        self.assertEqual(config["audio"]["trim"]["start_time"], "00:00:10")
-        self.assertEqual(config["audio"]["trim"]["end_time"], "00:00:20")
+        self.assertEqual(config["trim"]["start_time"], "00:00:10")
+        self.assertEqual(config["trim"]["end_time"], "00:00:20")
 
         self.assertEqual(
             config["video"]["intro_url"], "https://s3.example.com/video_intro.mp4"
@@ -57,8 +56,6 @@ class TestConfigLoader(unittest.TestCase):
         self.assertEqual(
             config["video"]["outro_url"], "https://s3.example.com/video_outro.mp4"
         )
-        self.assertEqual(config["video"]["trim"]["start_time"], "00:00:30")
-        self.assertEqual(config["video"]["trim"]["end_time"], "00:00:40")
 
     def test_missing_config_file(self):
         # Verify that a missing file raises an exception

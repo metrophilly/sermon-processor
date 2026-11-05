@@ -39,7 +39,7 @@ class AudioPipelineBuilder(BasePipelineBuilder):
             )
 
         # Add processing steps: one ffmpeg run does trim + fade + normalize + join
-        trim = audio_conf.get("trim", {})
+        trim = config.get("trim", {})
         output_format = audio_conf.get("output_format", "wav")
         steps.extend(
             [

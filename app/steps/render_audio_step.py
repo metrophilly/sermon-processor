@@ -1,25 +1,16 @@
 import json
 import os
-import re
 import subprocess
 
 from app.data_models.pipeline_data import PipelineData
+from app.utils.ffmpeg_progress import run_ffmpeg
 from app.utils.paths import audio_codec_for
+from app.utils.timestamps import parse_timestamp  # noqa: F401  (re-exported)
 
 LOUDNORM = "loudnorm=I=-16:TP=-1:LRA=11:linear=true"
-_TIMESTAMP = re.compile(r"^(\d+):([0-5]\d):([0-5]\d(?:\.\d+)?)$")
 # Allow the configured end time to overshoot the real duration by this much,
 # since durations from ffprobe and wall-clock timestamps rarely agree exactly.
 _END_TOLERANCE_SECONDS = 1.0
-
-
-def parse_timestamp(value):
-    """Converts "HH:MM:SS" (optionally with fractional seconds) to seconds."""
-    match = _TIMESTAMP.match(str(value).strip())
-    if not match:
-        raise ValueError(f"Invalid timestamp '{value}'. Expected HH:MM:SS.")
-    hours, minutes, seconds = match.groups()
-    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
 def probe_audio_duration(path):
@@ -86,8 +77,9 @@ def render_audio_step(
     output_format="wav",
     fade_duration=1,
     sample_rate=44100,
-    ffmpeg_loglevel="info",
+    ffmpeg_loglevel="error",
     ffmpeg_hide_banner=True,
+    output_path=None,
 ):
     """
     Trims the main audio, fades it in and out, loudness-normalizes every
@@ -101,8 +93,8 @@ def render_audio_step(
     Intro and outro are optional. If `start_time`/`end_time` are omitted the
     whole file is used.
 
-    The result is written next to the main file as `<name>_rendered.<format>`
-    and becomes the pipeline's active file.
+    The result is written to `output_path` if given, otherwise next to the main
+    file as `<name>_rendered.<format>`, and becomes the pipeline's active file.
     """
     main_path = data.active_file_path
     main_duration = probe_audio_duration(main_path)
@@ -124,13 +116,14 @@ def render_audio_step(
     fade = min(float(fade_duration), length / 2)
 
     main_index = 1 if data.intro_file_path else 0
+    total_seconds = length
     segments = []  # (path, input_options)
     if data.intro_file_path:
-        probe_audio_duration(data.intro_file_path)
+        total_seconds += probe_audio_duration(data.intro_file_path)
         segments.append((data.intro_file_path, []))
     segments.append((main_path, ["-ss", f"{start:.3f}", "-t", f"{length:.3f}"]))
     if data.outro_file_path:
-        probe_audio_duration(data.outro_file_path)
+        total_seconds += probe_audio_duration(data.outro_file_path)
         segments.append((data.outro_file_path, []))
 
     command = ["ffmpeg", "-y", "-loglevel", ffmpeg_loglevel]
@@ -159,9 +152,12 @@ def render_audio_step(
         command.extend(["-b:a", bitrate])
     command.extend(["-ar", str(sample_rate), "-ac", "2"])
 
-    base = os.path.splitext(main_path)[0]
-    output_file = f"{base}_rendered.{output_format}"
-    partial_file = f"{base}_rendered.partial.{output_format}"
+    if output_path:
+        output_file = output_path
+        os.makedirs(os.path.dirname(os.path.abspath(output_file)), exist_ok=True)
+    else:
+        output_file = f"{os.path.splitext(main_path)[0]}_rendered.{output_format}"
+    partial_file = f"{os.path.splitext(output_file)[0]}.partial.{output_format}"
     command.append(partial_file)
 
     print(
@@ -170,7 +166,7 @@ def render_audio_step(
         f"segment(s) -> {output_file}"
     )
     try:
-        subprocess.run(command, check=True)
+        run_ffmpeg(command, total_seconds)
         os.replace(partial_file, output_file)  # only a finished file gets the real name
     finally:
         if os.path.exists(partial_file):
