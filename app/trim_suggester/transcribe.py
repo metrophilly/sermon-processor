@@ -99,7 +99,7 @@ def default_provider():
         return "api"
     raise SuggestionError(
         "No transcription is set up. Pick one:\n"
-        "  free, on this computer:  pip install faster-whisper\n"
+        "  free, on this computer:  python3 sermon setup   (installs faster-whisper)\n"
         "  cheap, hosted:           set GROQ_API_KEY or OPENAI_API_KEY\n"
         "Or skip auto-trim by passing --start and --end."
     )
@@ -128,7 +128,7 @@ def _extract_chunks(audio_path, workdir):
     return sorted(glob.glob(os.path.join(workdir, "chunk*.mp3")))
 
 
-def _transcribe_api(audio_path, progress):
+def _transcribe_api(audio_path, progress, bar=None):
     import requests
 
     settings = _api_settings()
@@ -143,8 +143,11 @@ def _transcribe_api(audio_path, progress):
     with tempfile.TemporaryDirectory() as workdir:
         chunks = _extract_chunks(audio_path, workdir)
         offset = 0.0
+        if bar:
+            bar(0.0)
         for index, chunk in enumerate(chunks):
-            progress(f"Transcribing part {index + 1} of {len(chunks)}...")
+            if not bar:
+                progress(f"Transcribing part {index + 1} of {len(chunks)}...")
             with open(chunk, "rb") as handle:
                 response = requests.post(
                     f"{base_url.rstrip('/')}/audio/transcriptions",
@@ -183,6 +186,8 @@ def _transcribe_api(audio_path, progress):
                         break
             segments.extend(part)
             offset += probe_audio_duration(chunk)
+            if bar:
+                bar((index + 1) / len(chunks))
     return segments
 
 
@@ -206,30 +211,59 @@ def _decode_to_samples(audio_path):
     return numpy.frombuffer(result.stdout, dtype=numpy.float32)
 
 
-def _transcribe_local(audio_path, duration, progress):
+def _transcribe_local(audio_path, duration, progress, bar=None):
     from faster_whisper import WhisperModel
 
     model_name = os.environ.get("SERMON_WHISPER_MODEL", "base.en")
     progress(f"Loading speech model '{model_name}' (first run downloads it)...")
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
+    progress("Reading the audio...")
     samples = _decode_to_samples(audio_path)
     iterator, _ = model.transcribe(
         samples, language="en", vad_filter=True, beam_size=1, word_timestamps=True
     )
     segments = []
     last_percent = -1
+    if bar:
+        bar(0.0)
     for item in iterator:
         words = [Word(w.start, w.end, w.word.strip()) for w in (item.words or [])]
         segments.append(Segment(item.start, item.end, item.text.strip(), words))
-        percent = int(item.end / duration * 100) if duration else 0
+        fraction = item.end / duration if duration else 0.0
+        if bar:
+            bar(fraction)
+            continue
+        percent = int(fraction * 100)
         if percent // 10 != last_percent // 10:
             last_percent = percent
             progress(f"Transcribing... {min(percent, 100)}%")
+    if bar:
+        bar(1.0)
     return segments
 
 
-def transcribe(audio_path, cache_dir="cache/transcripts", provider=None, progress=print):
-    """Returns a list of Segments for the audio, using the cache when possible."""
+def cached_transcript(audio_path, cache_dir="cache/transcripts"):
+    """Returns a previously saved transcript of this file, or None. Never transcribes."""
+    for provider in ("local", "api"):
+        path = _cache_path(audio_path, cache_dir, provider)
+        if os.path.exists(path):
+            try:
+                with open(path) as handle:
+                    return [_segment_from_dict(item) for item in json.load(handle)]
+            except (OSError, ValueError, KeyError):
+                continue
+    return None
+
+
+def transcribe(
+    audio_path, cache_dir="cache/transcripts", provider=None, progress=print, bar=None
+):
+    """
+    Returns a list of Segments for the audio, using the cache when possible.
+
+    `bar` is an optional progress bar (see app.utils.progress_bar.ProgressBar):
+    a callable taking a fraction from 0 to 1, with a `close()` method.
+    """
     provider = provider or default_provider()
     cache_file = _cache_path(audio_path, cache_dir, provider)
     if os.path.exists(cache_file):
@@ -238,14 +272,18 @@ def transcribe(audio_path, cache_dir="cache/transcripts", provider=None, progres
             return [_segment_from_dict(item) for item in json.load(handle)]
 
     duration = probe_audio_duration(audio_path)
-    if provider == "api":
-        segments = _transcribe_api(audio_path, progress)
-    else:
-        if not _local_available():
-            raise SuggestionError(
-                "Local transcription needs faster-whisper: pip install faster-whisper"
-            )
-        segments = _transcribe_local(audio_path, duration, progress)
+    try:
+        if provider == "api":
+            segments = _transcribe_api(audio_path, progress, bar)
+        else:
+            if not _local_available():
+                raise SuggestionError(
+                    "Local transcription needs faster-whisper. Run: python3 sermon setup"
+                )
+            segments = _transcribe_local(audio_path, duration, progress, bar)
+    finally:
+        if bar:
+            bar.close()  # always end the bar's line, even if transcription failed
 
     if not segments:
         raise SuggestionError("The transcript came back empty. Is the audio silent?")

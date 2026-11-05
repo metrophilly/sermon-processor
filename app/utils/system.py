@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 
 def in_container():
@@ -102,13 +103,35 @@ def open_result(path):
     return None
 
 
-def play_audio(path):
-    """Plays an audio file, blocking until it ends when the platform allows."""
+def _player_command(path):
+    if sys.platform == "darwin" and shutil.which("afplay"):
+        return ["afplay", path]
+    if shutil.which("ffplay"):
+        return ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path]
+    return None
+
+
+def play_audio(path, on_tick=None):
+    """
+    Plays an audio file, blocking until it ends when the platform allows.
+    `on_tick(seconds_elapsed)` is called about 5 times a second while it plays,
+    so the caller can show where in the clip we are.
+    """
     try:
-        if sys.platform == "darwin" and shutil.which("afplay"):
-            _run(["afplay", path])
-        elif shutil.which("ffplay"):
-            _run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path])
+        command = _player_command(path)
+        if command:
+            process = subprocess.Popen(
+                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            started = time.time()
+            try:
+                while process.poll() is None:
+                    if on_tick:
+                        on_tick(time.time() - started)
+                    time.sleep(0.2)
+            finally:
+                if process.poll() is None:
+                    process.terminate()  # e.g. Ctrl-C during playback
         elif sys.platform == "win32":
             os.startfile(path)  # opens in the default player; does not block
         elif shutil.which("xdg-open"):

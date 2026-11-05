@@ -66,6 +66,57 @@ def test_rerun_never_overwrites_an_earlier_result(env):
     assert sorted(p.name for p in folder.glob("*.wav")) == ["2026-11-01-2.wav", "2026-11-01.wav"]
 
 
+def _codec(path):
+    return subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def test_by_default_a_wav_an_mp3_and_a_record_are_written_together(env):
+    tmp_path, source = env
+    lines = []
+    code = cli.main(
+        ["audio", str(source), "--output-dir", str(tmp_path / "out"),
+         "--config", str(tmp_path / "none.json"), "--no-open",
+         "--start", "0:05", "--end", "0:25", "--date", "2026-11-01", "-y"],
+        print_fn=lines.append,
+    )
+
+    folder = tmp_path / "out" / "sermon"
+    assert code == 0
+    assert sorted(p.name for p in folder.iterdir()) == ["2026-11-01.json", "2026-11-01.mp3", "2026-11-01.wav"]
+    assert _codec(folder / "2026-11-01.wav") == "pcm_s16le"
+    assert _codec(folder / "2026-11-01.mp3") == "mp3"
+    # Same sermon: the two files are the same length.
+    assert _duration(folder / "2026-11-01.mp3") == pytest.approx(_duration(folder / "2026-11-01.wav"), abs=0.1)
+    record = json.loads((folder / "2026-11-01.json").read_text())
+    assert set(record["outputs"]) == {"wav", "mp3"}
+    assert record["output"].endswith(".wav")
+    text = "\n".join(lines)
+    assert "2026-11-01.wav" in text and "2026-11-01.mp3" in text
+    assert "edit in Audacity" in text and "ready to use" in text
+
+
+def test_a_single_format_can_still_be_asked_for(env):
+    tmp_path, source = env
+    _run(tmp_path, source, "--start", "0:05", "--end", "0:15", "--format", "wav", "--date", "2026-11-01", "-y")
+    folder = tmp_path / "out" / "sermon"
+    assert sorted(p.name for p in folder.iterdir()) == ["2026-11-01.json", "2026-11-01.wav"]
+
+
+def test_any_leftover_file_of_the_set_makes_the_next_run_use_a_new_name(env):
+    tmp_path, source = env
+    folder = tmp_path / "out" / "sermon"
+    folder.mkdir(parents=True)
+    (folder / "2026-11-01.mp3").write_bytes(b"an mp3 you already cleaned up in Audacity")
+
+    _run(tmp_path, source, "--start", "0:05", "--end", "0:15", "--date", "2026-11-01", "-y")
+
+    assert (folder / "2026-11-01.mp3").read_bytes() == b"an mp3 you already cleaned up in Audacity"
+    assert (folder / "2026-11-01-2.wav").exists() and (folder / "2026-11-01-2.mp3").exists()
+
+
 def test_default_date_is_the_most_recent_sunday(env, monkeypatch):
     tmp_path, source = env
     monkeypatch.setattr(cli, "last_sunday", lambda: "2026-11-01")
@@ -77,6 +128,7 @@ def test_mp3_output_format(env):
     tmp_path, source = env
     _run(tmp_path, source, "--start", "0:05", "--end", "0:15", "--format", "mp3", "--date", "2026-11-01", "-y")
     assert (tmp_path / "out" / "sermon" / "2026-11-01.mp3").exists()
+    assert not (tmp_path / "out" / "sermon" / "2026-11-01.wav").exists()
 
 
 def test_one_flag_without_the_other_is_rejected(env, capsys):

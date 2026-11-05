@@ -16,12 +16,19 @@ import sys
 import time
 
 from app.data_models.pipeline_data import PipelineData
-from app.steps.render_audio_step import probe_audio_duration, render_audio_step
+from app.steps.render_audio_step import (
+    DEFAULT_GAP_SECONDS,
+    probe_audio_duration,
+    render_audio_step,
+)
 from app.trim_suggester import SuggestionError, suggest_trim
+from app.trim_suggester.suggest import words_around
+from app.trim_suggester.transcribe import cached_transcript
 from app.utils.cut_preview import confirm_cuts
 from app.utils.dates import last_sunday, validate_date
 from app.utils.download import download_file
 from app.utils.ffmpeg_path import ensure_ffmpeg
+from app.utils.progress_bar import ProgressBar
 from app.utils.prune import prune_cache
 from app.utils.run_record import describe_input, write_run_record
 from app.utils.system import notify, open_result
@@ -44,6 +51,12 @@ def build_parser():
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
+    commands.add_parser(
+        "setup",
+        help="One-time setup: install the optional extras (speech-to-text, bundled ffmpeg) "
+        "into a private .venv in this folder",
+    )
+
     audio = commands.add_parser(
         "audio", help="Trim, fade, normalize and add intro/outro to a recording"
     )
@@ -54,8 +67,20 @@ def build_parser():
         "--date",
         help="Sermon date as YYYY-MM-DD (default: the most recent Sunday)",
     )
-    audio.add_argument("--format", choices=["wav", "mp3"], help="Output format")
+    audio.add_argument(
+        "--format",
+        choices=["both", "wav", "mp3"],
+        help="Files to make: both (default) writes a .wav to edit in Audacity and an "
+        ".mp3 that is ready to use",
+    )
     audio.add_argument("--fade", type=float, default=1.0, help="Fade seconds (default 1)")
+    audio.add_argument(
+        "--gap",
+        type=float,
+        default=DEFAULT_GAP_SECONDS,
+        help="Seconds of silence between the intro and the sermon, and between the "
+        "sermon and the outro (default 2.5, 0 for none)",
+    )
     audio.add_argument("--stream-id", help="Output subfolder (default: from config)")
     audio.add_argument(
         "--output-dir", default=DEFAULT_OUTPUT_DIR, help="Where results go"
@@ -107,16 +132,18 @@ def fetch_clip(url, filename):
         raise CliError(f"Could not download {url}: {error}")
 
 
-def unique_output_path(output_dir, stream_id, date, fmt):
-    """Never overwrites an earlier result: a second run on one date becomes -2, -3..."""
+def unique_output_stem(output_dir, stream_id, date):
+    """
+    The path for this run's files without an extension (.wav, .mp3 and .json
+    share it). Never overwrites an earlier result: if any of the three already
+    exists, the second run on one date becomes `<date>-2`, then `-3`...
+    """
     folder = os.path.join(output_dir, stream_id)
-    candidate, number = f"{date}.{fmt}", 2
-    while os.path.exists(os.path.join(folder, candidate)) or os.path.exists(
-        os.path.join(folder, f"{os.path.splitext(candidate)[0]}.json")
-    ):
-        candidate = f"{date}-{number}.{fmt}"
+    stem, number = date, 2
+    while any(os.path.exists(os.path.join(folder, f"{stem}.{ext}")) for ext in ("wav", "mp3", "json")):
+        stem = f"{date}-{number}"
         number += 1
-    return os.path.join(folder, candidate)
+    return os.path.join(folder, stem)
 
 
 def _length(seconds):
@@ -137,11 +164,12 @@ def resolve_trim(args, input_path, duration, print_fn):
         duration,
         cache_dir=os.path.join(CACHE_DIR, "transcripts"),
         progress=print_fn,
+        bar=ProgressBar("Transcribing"),
     )
     return suggestion.start, suggestion.end, suggestion
 
 
-def print_plan(print_fn, input_path, duration, start, end, suggestion, intro, outro, output):
+def print_plan(print_fn, input_path, duration, start, end, suggestion, intro, outro, output, gap=0.0):
     print_fn("")
     print_fn(f"  File:    {input_path} ({_length(duration)} long)")
     source = "you chose" if suggestion is None else f"auto, {suggestion.confidence} confidence"
@@ -162,7 +190,14 @@ def print_plan(print_fn, input_path, duration, start, end, suggestion, intro, ou
         for warning in suggestion.warnings:
             print_fn(f"  WARNING: {warning}")
     print_fn(f"  Intro:   {'yes' if intro else 'none'}    Outro: {'yes' if outro else 'none'}")
-    print_fn(f"  Output:  {output}")
+    if gap and (intro or outro):
+        places = " and ".join(
+            name for name, present in (("after the intro", intro), ("before the outro", outro)) if present
+        )
+        print_fn(f"  Silence: {gap:g}s {places}")
+    outputs = output if isinstance(output, (list, tuple)) else [output]
+    for number, path in enumerate(outputs):
+        print_fn(f"  {'Output:' if number == 0 else '       '}  {path}")
     print_fn("")
 
 
@@ -175,7 +210,7 @@ def run_audio(args, input_fn=input, print_fn=print):
         raise CliError(f"File not found: {input_path}")
 
     date = validate_date(args.date) if args.date else last_sunday()
-    fmt = args.format or settings.get("output_format") or "wav"
+    fmt = args.format or settings.get("output_format") or "both"
     stream_id = args.stream_id or settings.get("stream_id") or "sermon"
 
     removed = prune_cache(CACHE_DIR, args.keep_days)
@@ -184,12 +219,19 @@ def run_audio(args, input_fn=input, print_fn=print):
 
     duration = probe_audio_duration(input_path)
     start, end, suggestion = resolve_trim(args, input_path, duration, print_fn)
-    output_path = unique_output_path(args.output_dir, stream_id, date, fmt)
+    stem = unique_output_stem(args.output_dir, stream_id, date)
+    primary = "wav" if fmt == "both" else fmt  # the master: what Audacity opens
+    output_path = f"{stem}.{primary}"
+    extra_output_path = f"{stem}.mp3" if fmt == "both" else None
+    planned_outputs = [output_path] + ([extra_output_path] if extra_output_path else [])
 
     intro = fetch_clip(settings["intro_url"], "audio_intro.wav") if settings.get("intro_url") else None
     outro = fetch_clip(settings["outro_url"], "audio_outro.wav") if settings.get("outro_url") else None
 
-    print_plan(print_fn, input_path, duration, start, end, suggestion, intro, outro, output_path)
+    print_plan(
+        print_fn, input_path, duration, start, end, suggestion, intro, outro, planned_outputs,
+        gap=args.gap,
+    )
     if args.plan_only:
         return 0
 
@@ -203,10 +245,19 @@ def run_audio(args, input_fn=input, print_fn=print):
         if input_fn("Render with these cuts? [Y/n] ").strip().lower() in ("n", "no", "q"):
             raise CliError("Cancelled.")
     else:
+        # Words around each cut: from this run's transcript, or a saved one.
+        segments = (suggestion.segments if suggestion else None) or cached_transcript(
+            input_path, os.path.join(CACHE_DIR, "transcripts")
+        )
         accepted = confirm_cuts(
             input_path, start, end, duration,
             workdir=os.path.join(CACHE_DIR, "previews"),
             input_fn=input_fn, print_fn=print_fn,
+            context_fn=(
+                (lambda seconds, before, after: words_around(segments, seconds, before, after))
+                if segments
+                else None
+            ),
         )
         if accepted is None:
             raise CliError("Cancelled.")
@@ -222,9 +273,11 @@ def run_audio(args, input_fn=input, print_fn=print):
         data,
         start_time=format_timestamp(start),
         end_time=format_timestamp(end),
-        output_format=fmt,
+        output_format=primary,
         fade_duration=args.fade,
         output_path=output_path,
+        gap_seconds=args.gap,
+        extra_output_path=extra_output_path,
     )
 
     record = {
@@ -232,6 +285,7 @@ def run_audio(args, input_fn=input, print_fn=print):
         "date": date,
         "format": fmt,
         "fade_seconds": args.fade,
+        "gap_seconds": args.gap,
         "trim": {
             "start": start,
             "end": end,
@@ -256,14 +310,22 @@ def run_audio(args, input_fn=input, print_fn=print):
         "intro_url": settings.get("intro_url"),
         "outro_url": settings.get("outro_url"),
         "output": os.path.abspath(output_path),
+        "outputs": {
+            os.path.splitext(path)[1].lstrip("."): os.path.abspath(path)
+            for path in planned_outputs
+        },
         "output_seconds": probe_audio_duration(output_path),
         "render_elapsed_seconds": round(time.time() - started, 1),
     }
     record_path = write_run_record(output_path, record)
 
-    print_fn(f"Done: {output_path}")
-    print_fn(f"Record: {record_path}")
-    notify("Sermon audio is ready", os.path.basename(output_path))
+    print_fn("Done:")
+    for path in planned_outputs + [record_path]:
+        label = {"wav": "edit in Audacity", "mp3": "ready to use", "json": "record for reruns"}[
+            os.path.splitext(path)[1].lstrip(".")
+        ]
+        print_fn(f"  {path}  ({os.path.getsize(path) / 1e6:.1f} MB, {label})")
+    notify("Sermon audio is ready", f"{os.path.basename(stem)} ({' + '.join(os.path.splitext(p)[1][1:] for p in planned_outputs)})")
     if not args.no_open:
         opened = open_result(os.path.abspath(output_path))
         if opened:
@@ -271,8 +333,41 @@ def run_audio(args, input_fn=input, print_fn=print):
     return 0
 
 
+def run_setup(print_fn=print):
+    """
+    Creates a private virtual environment in `.venv` and installs the optional
+    extras into it. Needed because system Python on a Mac (Homebrew) refuses
+    `pip install`, and a private folder keeps the system untouched anyway.
+    """
+    venv_dir = os.path.join(ROOT, ".venv")
+    requirements = os.path.join(ROOT, "requirements-optional.txt")
+    try:
+        if not os.path.isdir(venv_dir):
+            print_fn(f"Creating a private Python environment in {venv_dir} ...")
+            subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True)
+        python = os.path.join(
+            venv_dir, *(("Scripts", "python.exe") if os.name == "nt" else ("bin", "python"))
+        )
+        print_fn("Installing speech-to-text and the other extras (this can take a minute)...")
+        subprocess.run([python, "-m", "pip", "install", "-r", requirements], check=True)
+    except subprocess.CalledProcessError as error:
+        print_fn(
+            f"\nSetup failed while running: {' '.join(str(a) for a in error.cmd)}\n"
+            "If the first step failed on Linux, install the venv package "
+            "(for example: sudo apt install python3-venv) and run setup again."
+        )
+        return 1
+    print_fn(
+        "\nSetup done. Try:  python3 sermon audio <file>\n"
+        "The first auto-trim downloads a speech model (about 150 MB) once."
+    )
+    return 0
+
+
 def main(argv=None, input_fn=input, print_fn=print):
     args = build_parser().parse_args(argv)
+    if args.command == "setup":
+        return run_setup(print_fn)
     try:
         ensure_ffmpeg()
         return run_audio(args, input_fn=input_fn, print_fn=print_fn)
@@ -286,7 +381,7 @@ def main(argv=None, input_fn=input, print_fn=print):
         return 1
     except ImportError as error:
         package = getattr(error, "name", None) or "a required package"
-        print_fn(f"\nMissing Python package '{package}'. Install it with: pip install {package}")
+        print_fn(f"\nMissing Python package '{package}'. Run: python3 sermon setup")
         return 1
     except subprocess.CalledProcessError as error:
         detail = (error.output or "").strip() or "no details"

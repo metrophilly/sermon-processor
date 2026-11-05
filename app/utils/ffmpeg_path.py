@@ -6,7 +6,7 @@ ffmpeg and ffprobe were not found.
 Install one of:
   macOS:    brew install ffmpeg
   Windows:  winget install ffmpeg
-  Any OS:   pip install static-ffmpeg   (downloads a private copy on first run)
+  Any OS:   python3 sermon setup        (installs a private copy of ffmpeg)
 """
 
 

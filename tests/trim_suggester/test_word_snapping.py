@@ -65,7 +65,11 @@ def test_word_timing_puts_the_cut_on_the_actual_amen():
     amen = words[4]
     result = validate_and_snap(RAW, _service(words), DURATION)
 
-    assert result.end == pytest.approx(amen.end + END_PAD)
+    next_word = words[5]  # "Let's" follows "Amen." almost immediately
+    # The next word is closer than the full pad, so the cut goes halfway into the gap
+    # instead of running into "Let's".
+    assert result.end == pytest.approx(amen.end + (next_word.start - amen.end) / 2)
+    assert result.end < next_word.start
     assert result.verified is True
     assert not any("no precise timing" in w for w in result.warnings)
 

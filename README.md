@@ -2,10 +2,13 @@
 
 ## tl;dr
 
-1. set `config/pipeline_config.json` (once: it only needs the intro and outro
+1. once: run `python3 sermon setup` (installs the extras into a private `.venv`
+   in this folder, so nothing touches your system Python)
+2. once: set `config/pipeline_config.json` (it only needs the intro and outro
    URLs for audio)
-2. run `python3 sermon audio ~/Downloads/service.m4a`
-3. listen to the two cuts, press Enter, and the finished file opens in Audacity
+3. run `python3 sermon audio ~/Downloads/service.m4a` (or whereever the service
+   audiofile is)
+4. listen to the two cuts, press Enter, and the finished file opens in Audacity
 
 The older `make run` flow (Docker, config-file driven) still works for video and
 for audio.
@@ -27,42 +30,58 @@ What happens:
    model where the sermon starts and ends (see below).
 2. **Plan.** It prints the file, cuts, the exact words at each cut (in auto
    mode), and where the output goes.
-3. **Listen.** It plays a few seconds around each cut. Press Enter to accept,
-   `r` to replay, `s 43:50` or `e 1:17:30` to move a cut, `q` to cancel. `-y`
-   skips this (and refuses to run unattended if an automatic cut is unverified).
-4. **Render.** One ffmpeg run trims, fades, matches loudness and adds the intro
-   and outro, with a progress bar.
-5. **Done.** A notification appears and the result opens in Audacity (or is
-   revealed in Finder/Explorer). Next to it is a `.json` record of exactly what
-   was done: input, cuts, the auto-trim's quotes, and the tool version.
+3. **Listen.** It plays about 23 seconds: a few seconds before the start cut,
+   a short **beep** exactly at the cut, the first seconds of the sermon, then the
+   same around the end cut. The screen lists the words you should hear before and
+   after each beep (from the transcript), and a live line shows where you are in
+   the clip. Press Enter to accept, `r` to replay, `s 43:50` or `e 1:17:30` to
+   move a cut to a time, `s +2` / `e -0.5` to nudge it by any number of seconds, `q` to cancel.
+   `-y` skips this (and refuses to run unattended if an automatic cut is
+   unverified).
+4. **Render.** One ffmpeg run trims, fades, matches loudness, and joins the
+   intro, the sermon and the outro with **2.5 seconds of silence** after the
+   intro and before the outro, with a progress bar and time left.
+5. **Done.** A notification appears and the `.wav` opens in Audacity (or is
+   revealed in Finder/Explorer). Three files are written side by side, from the
+   same render:
+   - `2026-11-01.wav`: the master, to edit in Audacity
+   - `2026-11-01.mp3`: ready to use as it is, if the sermon sounds good
+   - `2026-11-01.json`: a record of exactly what was done (input, cuts, the
+     auto-trim's quotes, the tool version) for reruns
 
 Other options: `--date 2026-11-01` (default: the most recent Sunday, or today if
-it is Sunday), `--format mp3`, `--fade 2`, `--no-open`, `--no-preview`.
-Results are never overwritten: a second run on the same date becomes
-`2026-11-01-2.wav`. Cached downloads and transcripts older than 28 days are
-deleted automatically (`--keep-days 0` to turn that off).
+it is Sunday), `--format wav` or `--format mp3` for just one file, `--fade 2`,
+`--gap 3` (seconds of silence next to the intro and outro, `0` for none),
+`--no-open`, `--no-preview`, `--plan-only`. Results are never overwritten: if
+any of the three files already exists for a date, the next run becomes
+`2026-11-01-2.wav` and so on. Cached downloads and transcripts older than 28
+days are deleted automatically (`--keep-days 0` to turn that off).
 
 ### Automatic Trim
 
 Needs two things, each with a free and a hosted option. Nothing is sent anywhere
 unless you set it up.
 
-| Step | Free | Hosted |
-| --- | --- | --- |
-| Transcribe | `pip install faster-whisper` (runs on your computer; set `SERMON_WHISPER_MODEL`, default `base.en`) | set `GROQ_API_KEY` or `OPENAI_API_KEY` |
-| Find the cuts | the `claude` command (Claude Code) is used if installed | set `ANTHROPIC_API_KEY` |
+| Step          | Free                                                                                                      | Hosted                                 |
+| ------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Transcribe    | `python3 sermon setup` installs it (runs on your computer; set `SERMON_WHISPER_MODEL`, default `base.en`) | set `GROQ_API_KEY` or `OPENAI_API_KEY` |
+| Find the cuts | the `claude` command (Claude Code) is used if installed                                                   | set `ANTHROPIC_API_KEY`                |
 
 `SERMON_STT_PROVIDER` (`local`/`api`) and `SERMON_LLM_PROVIDER`
 (`anthropic`/`claude-cli`) force a choice. What counts as the start and end of
-the sermon is written in plain words in `config/trim_guidance.md`: edit that file
-to change it. The model must quote the exact words at each cut, and those words
-are checked against the transcript, so an invented answer is flagged instead of
-trusted.
+the sermon is written in plain words in `config/trim_guidance.md`: edit that
+file to change it. The model must quote the exact words at each cut, and those
+words are checked against the transcript, so an invented answer is flagged
+instead of trusted.
 
 ### Without Docker
 
-You need Python 3 and ffmpeg. `pip install -r requirements-optional.txt` adds a
-downloadable ffmpeg (useful on Windows) and the free transcriber.
+You need Python 3 and ffmpeg (`brew install ffmpeg` on a Mac,
+`winget install ffmpeg` on Windows). `python3 sermon setup` then creates a
+private `.venv` here and installs the free transcriber and a downloadable ffmpeg
+(useful on Windows) into it. After that, `python3 sermon ...` switches to that
+environment by itself. Plain `pip install` won't work on a Homebrew Python (it
+refuses to change system packages), which is why setup uses its own folder.
 
 ## Configuration
 
@@ -94,7 +113,6 @@ order to sidestep this, follow these steps:
 
 1. Download the audio and videofile on your own, and add it to the `cache`
    folder.
-
    - Helper scripts:
      - my audio download one-liner:
        `yt-dlp -f "bestaudio" -x --audio-format m4a -o "%(upload_date>%Y-%m-%d)s.%(ext)s" "https://youtube.com/live/g0jKUy1hV4w"`
@@ -104,7 +122,6 @@ order to sidestep this, follow these steps:
 2. In `config/pipeline_config.json`, flip the `manual_download` boolean to
    `true`, and add in the appropriate paths to the files to the `manual_path`
    fields.
-
    - eg: In `config/pipeline_config.json`:
 
      ```
@@ -154,8 +171,8 @@ Selecting to process the audio kicks off `scripts/run_audio_pipeline.py`, which:
    process the piece of content as we need.
 
 The audio pipeline's processing is a single step,
-`app/steps/render_audio_step.py`. One `ffmpeg` run trims the sermon, fades it
-in and out, loudness-normalizes the intro, sermon and outro, and joins them. It
+`app/steps/render_audio_step.py`. One `ffmpeg` run trims the sermon, fades it in
+and out, loudness-normalizes the intro, sermon and outro, and joins them. It
 writes no intermediate files, so a failed run can't leave anything behind that
 breaks the next one.
 

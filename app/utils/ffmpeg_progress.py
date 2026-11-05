@@ -1,19 +1,11 @@
 import re
 import subprocess
 import sys
-import time
+
+from app.utils.progress_bar import ProgressBar
 
 _PROGRESS_KEY = re.compile(r"^[a-z_0-9]+=")
 _OUT_TIME = re.compile(r"^out_time_(?:us|ms)=(-?\d+)")  # both are microseconds
-_BAR_WIDTH = 30
-
-
-def _bar(fraction, elapsed):
-    filled = int(round(fraction * _BAR_WIDTH))
-    return (
-        f"[{'#' * filled}{'-' * (_BAR_WIDTH - filled)}] "
-        f"{int(fraction * 100):3d}%  {int(elapsed)}s"
-    )
 
 
 def run_ffmpeg(command, total_seconds, stream=None):
@@ -28,7 +20,6 @@ def run_ffmpeg(command, total_seconds, stream=None):
     if ffmpeg fails.
     """
     stream = stream or sys.stdout
-    interactive = hasattr(stream, "isatty") and stream.isatty()
     full = command[:1] + ["-progress", "pipe:1", "-nostats"] + command[1:]
 
     process = subprocess.Popen(
@@ -38,27 +29,18 @@ def run_ffmpeg(command, total_seconds, stream=None):
         text=True,
         bufsize=1,
     )
+    bar = ProgressBar(stream=stream)
     messages = []
-    started = time.time()
-    last_percent = -1
     for raw in process.stdout:
         line = raw.strip()
         match = _OUT_TIME.match(line)
         if match and total_seconds > 0:
-            fraction = min(max(int(match.group(1)) / 1e6 / total_seconds, 0.0), 1.0)
-            percent = int(fraction * 100)
-            if percent != last_percent and (interactive or percent % 10 == 0):
-                last_percent = percent
-                text = _bar(fraction, time.time() - started)
-                stream.write(f"\r{text}" if interactive else f"{text}\n")
-                stream.flush()
+            bar(int(match.group(1)) / 1e6 / total_seconds)
         elif line and not _PROGRESS_KEY.match(line):
             messages.append(line)
 
     returncode = process.wait()
-    if interactive and last_percent >= 0:
-        stream.write("\n")
-        stream.flush()
+    bar.close()
     if returncode != 0:
         raise subprocess.CalledProcessError(
             returncode, full, output="\n".join(messages[-15:])

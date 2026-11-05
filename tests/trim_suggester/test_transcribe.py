@@ -77,6 +77,77 @@ def test_api_transcription_offsets_each_chunk_and_caches(tmp_path, monkeypatch):
     assert again == first
 
 
+class FakeBar:
+    def __init__(self):
+        self.fractions = []
+        self.closed = 0
+
+    def __call__(self, fraction):
+        self.fractions.append(round(fraction, 3))
+
+    def close(self):
+        self.closed += 1
+
+
+@needs_ffmpeg
+def test_api_transcription_reports_progress_per_part(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    monkeypatch.setenv("SERMON_STT_PROVIDER", "api")
+    monkeypatch.setattr(transcribe_module, "CHUNK_SECONDS", 5)  # 12s -> 3 parts
+    audio = tmp_path / "service.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=d=12", str(audio)], check=True
+    )
+    import requests
+
+    def fake_post(url, headers, files, data, timeout):
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
+        return response
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    messages = []
+    bar = FakeBar()
+
+    transcribe(str(audio), cache_dir=str(tmp_path / "c"), progress=messages.append, bar=bar)
+
+    assert bar.fractions == [0.0, 0.333, 0.667, 1.0]
+    assert bar.closed == 1
+    assert not any("part" in m for m in messages)  # the bar replaces the text messages
+
+
+@needs_ffmpeg
+def test_the_bar_is_closed_even_when_transcription_fails(tmp_path, monkeypatch):
+    audio = tmp_path / "a.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=d=2", str(audio)], check=True
+    )
+    bar = FakeBar()
+
+    with pytest.raises(SuggestionError):  # local requested but not installed (fixture)
+        transcribe(str(audio), cache_dir=str(tmp_path / "c"), provider="local",
+                   progress=lambda *_: None, bar=bar)
+
+    assert bar.closed == 1
+
+
+def test_a_saved_transcript_shows_no_bar(tmp_path, monkeypatch):
+    audio = tmp_path / "a.wav"
+    audio.write_bytes(b"x")
+    cache = tmp_path / "c"
+    cache.mkdir()
+    saved = transcribe_module._cache_path(str(audio), str(cache), "local")
+    with open(saved, "w") as handle:
+        handle.write('[{"start": 0, "end": 1, "text": "hello", "words": []}]')
+    bar = FakeBar()
+
+    segments = transcribe(str(audio), cache_dir=str(cache), provider="local",
+                          progress=lambda *_: None, bar=bar)
+
+    assert segments[0].text == "hello"
+    assert bar.fractions == [] and bar.closed == 0
+
+
 @needs_ffmpeg
 def test_api_error_is_reported_plainly(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "bad")

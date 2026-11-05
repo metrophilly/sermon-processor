@@ -8,6 +8,8 @@ from app.utils.paths import audio_codec_for
 from app.utils.timestamps import parse_timestamp  # noqa: F401  (re-exported)
 
 LOUDNORM = "loudnorm=I=-16:TP=-1:LRA=11:linear=true"
+# Silence between the intro and the sermon, and between the sermon and the outro.
+DEFAULT_GAP_SECONDS = 2.5
 # Allow the configured end time to overshoot the real duration by this much,
 # since durations from ffprobe and wall-clock timestamps rarely agree exactly.
 _END_TOLERANCE_SECONDS = 1.0
@@ -80,10 +82,16 @@ def render_audio_step(
     ffmpeg_loglevel="error",
     ffmpeg_hide_banner=True,
     output_path=None,
+    gap_seconds=DEFAULT_GAP_SECONDS,
+    extra_output_path=None,
 ):
     """
     Trims the main audio, fades it in and out, loudness-normalizes every
     segment, and joins intro + main + outro, all in a single ffmpeg run.
+
+    `gap_seconds` of digital silence is placed between the intro and the sermon
+    and between the sermon and the outro (0 for none). It is added on top of the
+    sermon's own short lead-in and tail, which are already inside the trim.
 
     Replaces the old trim -> fade -> normalize x3 -> concat chain. There are no
     intermediate files, so a failed run cannot leave behind anything that
@@ -115,23 +123,36 @@ def render_audio_step(
     length = end - start
     fade = min(float(fade_duration), length / 2)
 
-    main_index = 1 if data.intro_file_path else 0
+    gap = max(0.0, float(gap_seconds))
     total_seconds = length
-    segments = []  # (path, input_options)
+    segments = []  # (kind, path, input_options); kind is "clip" or "silence"
     if data.intro_file_path:
         total_seconds += probe_audio_duration(data.intro_file_path)
-        segments.append((data.intro_file_path, []))
-    segments.append((main_path, ["-ss", f"{start:.3f}", "-t", f"{length:.3f}"]))
+        segments.append(("clip", data.intro_file_path, []))
+        if gap:
+            segments.append(("silence", None, []))  # intro | silence | sermon
+            total_seconds += gap
+    main_index = len(segments)
+    segments.append(("clip", main_path, ["-ss", f"{start:.3f}", "-t", f"{length:.3f}"]))
     if data.outro_file_path:
+        if gap:
+            segments.append(("silence", None, []))  # sermon | silence | outro
+            total_seconds += gap
         total_seconds += probe_audio_duration(data.outro_file_path)
-        segments.append((data.outro_file_path, []))
+        segments.append(("clip", data.outro_file_path, []))
 
     command = ["ffmpeg", "-y", "-loglevel", ffmpeg_loglevel]
     if ffmpeg_hide_banner:
         command.append("-hide_banner")
 
     filters = []
-    for index, (path, input_options) in enumerate(segments):
+    for index, (kind, path, input_options) in enumerate(segments):
+        if kind == "silence":
+            command.extend(
+                ["-f", "lavfi", "-t", f"{gap:.3f}", "-i", f"anullsrc=r={sample_rate}:cl=stereo"]
+            )
+            filters.append(f"[{index}:a]aformat=channel_layouts=stereo[s{index}]")
+            continue
         command.extend(input_options + ["-i", os.path.abspath(path)])
         filters.append(
             _segment_filter(
@@ -143,10 +164,15 @@ def render_audio_step(
         )
     joined = "".join(f"[s{i}]" for i in range(len(segments)))
     filters.append(f"{joined}concat=n={len(segments)}:v=0:a=1[out]")
+    primary_label, extra_label = "[out]", None
+    if extra_output_path:
+        # ffmpeg can't map one filter output to two files, so split it first.
+        filters.append("[out]asplit=2[out_a][out_b]")
+        primary_label, extra_label = "[out_a]", "[out_b]"
 
     codec, bitrate = audio_codec_for(f".{output_format}")
     command.extend(
-        ["-filter_complex", ";".join(filters), "-map", "[out]", "-vn", "-c:a", codec]
+        ["-filter_complex", ";".join(filters), "-map", primary_label, "-vn", "-c:a", codec]
     )
     if bitrate:
         command.extend(["-b:a", bitrate])
@@ -160,17 +186,34 @@ def render_audio_step(
     partial_file = f"{os.path.splitext(output_file)[0]}.partial.{output_format}"
     command.append(partial_file)
 
+    # An optional second file (e.g. an mp3 beside the wav) from the same pass:
+    # the audio is only processed once, and both files are the same sermon.
+    extra_partial = None
+    if extra_output_path:
+        extra_base, extra_ext = os.path.splitext(extra_output_path)
+        extra_codec, extra_bitrate = audio_codec_for(extra_ext)
+        os.makedirs(os.path.dirname(os.path.abspath(extra_output_path)), exist_ok=True)
+        extra_partial = f"{extra_base}.partial{extra_ext}"
+        command.extend(["-map", extra_label, "-vn", "-c:a", extra_codec])
+        if extra_bitrate:
+            command.extend(["-b:a", extra_bitrate])
+        command.extend(["-ar", str(sample_rate), "-ac", "2", extra_partial])
+
+    clips = sum(1 for kind, _, _ in segments if kind == "clip")
     print(
         f"Rendering {os.path.basename(main_path)} "
-        f"[{start:.0f}s-{end:.0f}s] with {len(segments) - 1} intro/outro "
+        f"[{start:.0f}s-{end:.0f}s] with {clips - 1} intro/outro "
         f"segment(s) -> {output_file}"
     )
     try:
         run_ffmpeg(command, total_seconds)
         os.replace(partial_file, output_file)  # only a finished file gets the real name
+        if extra_partial:
+            os.replace(extra_partial, extra_output_path)
     finally:
-        if os.path.exists(partial_file):
-            os.remove(partial_file)
+        for leftover in (partial_file, extra_partial):
+            if leftover and os.path.exists(leftover):
+                os.remove(leftover)
 
     data.active_file_path = output_file
     return data

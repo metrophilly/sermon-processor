@@ -32,6 +32,9 @@ MAX_TRUSTED_SEGMENT = 30.0
 MAX_SNAP_SHIFT = 30.0
 # Silence longer than this inside the transcript is shown to the model as a gap.
 GAP_SECONDS = 45.0
+# A pause this long in the middle of a quoted phrase means the quote spans two
+# separate utterances (e.g. "Thank you." ... [pause] ... "Today's scripture...").
+LONG_PAUSE = 3.0
 
 GUIDANCE_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -58,6 +61,8 @@ Transcript, one line per stretch of speech as "[H:MM:SS] text". A line such as "
 
 {transcript}
 
+The start_quote must begin with the very first word that belongs in the clip, and the end_quote must end with the very last word that belongs in it. Never begin start_quote with the previous speaker's closing words (such as "Thank you."), and never end end_quote with the next speaker's opening words.
+
 If the start or end could reasonably be somewhere else (for example the preacher speaks again after a song, or you are unsure which of two prayers closes the sermon), choose the most likely one for the main answer and list the other under "alternatives". Use an empty list when you are sure.
 
 Reply with only this JSON object:
@@ -78,6 +83,51 @@ class TrimSuggestion:
     model: str = ""
     # Other plausible cuts the model offered: dicts with which/time/quote/note.
     alternatives: List[dict] = field(default_factory=list)
+    # The transcript this was based on, so the cut preview can show the words
+    # around each cut. Not saved in the run record.
+    segments: list = field(default_factory=list, repr=False)
+
+
+def words_around(segments, seconds, before_seconds=6.0, after_seconds=6.0, count=10):
+    """
+    Returns (heard before the cut, heard after the cut) as text, covering only
+    what will actually be audible in the cut preview: the words spoken in the
+    `before_seconds` leading up to the cut and the `after_seconds` following it.
+    If nobody speaks in a window, says so and says what comes next, so the
+    screen never promises words the clip does not play.
+    """
+    items = []  # (start, end, text), one per word (or per segment without words)
+    for segment in segments:
+        if segment.words:
+            items.extend((w.start, w.end, w.text) for w in segment.words)
+        else:
+            items.append((segment.start, segment.end, segment.text))
+
+    earlier = [i for i in items if i[1] <= seconds + 0.05]
+    later = [i for i in items if i[0] >= seconds - 0.05]
+
+    def words(chosen):
+        return " ".join(text for _, _, text in chosen)
+
+    heard_before = [i for i in earlier if i[1] > seconds - before_seconds][-count:]
+    heard_after = [i for i in later if i[0] < seconds + after_seconds][:count]
+
+    if heard_before:
+        before_text = ("..." if len(earlier) > len(heard_before) else "") + words(heard_before)
+    elif earlier:
+        gap = seconds - earlier[-1][1]
+        before_text = f'(quiet. The last words were {gap:.0f}s earlier: "...{words(earlier[-6:])}")'
+    else:
+        before_text = ""
+
+    if heard_after:
+        after_text = words(heard_after) + ("..." if len(later) > len(heard_after) else "")
+    elif later:
+        gap = later[0][0] - seconds
+        after_text = f'(silence for {gap:.0f}s, then: "{words(later[:6])}...")'
+    else:
+        after_text = ""
+    return before_text, after_text
 
 
 def _pieces(segment):
@@ -276,6 +326,55 @@ def _find_phrase(phrase, segments, around, position):
     return best if best_ratio >= 0.75 else None
 
 
+def _drop_across_pause(stream, hit, position, warnings):
+    """
+    If the quoted words contain a long pause, they are two separate utterances.
+    Keep only the side that is the real boundary: for a start, the words after
+    the last pause; for an end, the words before the first pause. Says so.
+    """
+    first, last = hit
+    if position == "head":
+        for k in range(last, first, -1):
+            gap = stream[k][1] - stream[k - 1][2]
+            if gap > LONG_PAUSE:
+                warnings.append(
+                    f"The start words had a {gap:.0f}s pause in the middle, so the cut "
+                    f"was placed after it, at \"{stream[k][0]}\". Listen to it."
+                )
+                return k, last
+    else:
+        for k in range(first + 1, last + 1):
+            gap = stream[k][1] - stream[k - 1][2]
+            if gap > LONG_PAUSE:
+                warnings.append(
+                    f"The end words had a {gap:.0f}s pause in the middle, so the cut "
+                    f"was placed before it, at \"{stream[k - 1][0]}\". Listen to it."
+                )
+                return first, k - 1
+    return first, last
+
+
+def _word_cut(stream, first, last, position):
+    """
+    Places a cut on a real word with a safety pad, but never inside the
+    neighbouring word: if the next word on the far side is closer than the pad,
+    the cut goes halfway into the gap instead.
+    """
+    if position == "head":
+        edge = stream[first][1]
+        cut = edge - START_PAD
+        if first > 0 and cut < stream[first - 1][2]:
+            previous_end = stream[first - 1][2]
+            cut = previous_end + (edge - previous_end) / 2
+        return cut
+    edge = stream[last][2]
+    cut = edge + END_PAD
+    if last + 1 < len(stream) and cut > stream[last + 1][1]:
+        next_start = stream[last + 1][1]
+        cut = edge + (next_start - edge) / 2
+    return cut
+
+
 def _snap(quote, claimed, segments, stream, position, warnings):
     """
     Returns (cut_time, found). The cut sits on the real word when word timing is
@@ -287,8 +386,8 @@ def _snap(quote, claimed, segments, stream, position, warnings):
     if stream:
         hit = _find_in_words(quote, stream, claimed, position)
         if hit:
-            edge = stream[hit[0]][1] if position == "head" else stream[hit[1]][2]
-            return edge + pad, True
+            first, last = _drop_across_pause(stream, hit, position, warnings)
+            return _word_cut(stream, first, last, position), True
 
     index = _find_phrase(quote, segments, claimed, position)
     if index is None:
@@ -392,16 +491,20 @@ def suggest_trim(
     llm=None,
     guidance=None,
     progress=print,
+    bar=None,
 ):
     """
     Transcribes the audio (cached) and asks a language model where the sermon
-    starts and ends. `segments` and `llm` can be injected for testing.
+    starts and ends. `segments` and `llm` can be injected for testing; `bar` is
+    an optional progress bar shown while transcribing.
     """
     if segments is None:
-        segments = transcribe(audio_path, cache_dir=cache_dir, progress=progress)
+        segments = transcribe(audio_path, cache_dir=cache_dir, progress=progress, bar=bar)
     guidance = guidance if guidance is not None else load_guidance()
     llm = llm or default_llm()
 
     progress("Asking the language model where the sermon starts and ends...")
     text, model = llm(SYSTEM, build_prompt(segments, guidance))
-    return validate_and_snap(parse_json_object(text), segments, duration, model)
+    suggestion = validate_and_snap(parse_json_object(text), segments, duration, model)
+    suggestion.segments = segments
+    return suggestion
