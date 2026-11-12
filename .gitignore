@@ -12,3 +12,7 @@ tests/logs
 
 /venv
 .venv/
+# Pilot (DT-246) virtual environments
+pilot/.venv*/
+pilot/audio/
+pilot/*.log

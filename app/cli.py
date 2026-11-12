@@ -58,6 +58,19 @@ def build_parser():
         "into a private .venv in this folder",
     )
 
+    manifest = commands.add_parser(
+        "manifest",
+        help="List every sermon to transcribe from Sanity, check each audio file exists, report problems",
+    )
+    manifest.add_argument(
+        "--env-file",
+        help="File with SANITY_API_READ_TOKEN (for example ../metrophilly/frontend/.env.local). "
+        "The environment variable of the same name also works.",
+    )
+    manifest.add_argument(
+        "--refresh", action="store_true", help="Query Sanity again instead of using the saved copy"
+    )
+
     audio = commands.add_parser(
         "audio", help="Trim, fade, normalize and add intro/outro to a recording"
     )
@@ -371,10 +384,49 @@ def run_setup(print_fn=print):
     return 0
 
 
+def run_manifest(args, print_fn=print):
+    """Builds output/archive/manifest.json and report.txt (DT-245)."""
+    from app.archive.manifest import build_manifest, fetch_sermons, load_env_file, report
+
+    out_dir = os.path.join(DEFAULT_OUTPUT_DIR, "archive")
+    os.makedirs(out_dir, exist_ok=True)
+    saved = os.path.join(out_dir, "sanity_sermons.json")
+    if os.path.exists(saved) and not args.refresh:
+        with open(saved) as handle:
+            docs = json.load(handle)
+        print_fn(f"Using the saved Sanity copy ({len(docs)} sermons). Use --refresh to query again.")
+    else:
+        token = os.environ.get("SANITY_API_READ_TOKEN")
+        if args.env_file:
+            token = load_env_file(os.path.expanduser(args.env_file)).get("SANITY_API_READ_TOKEN", token)
+        if not token:
+            raise CliError("Set SANITY_API_READ_TOKEN or pass --env-file with that variable in it.")
+        docs = fetch_sermons(token)
+        with open(saved, "w") as handle:
+            json.dump(docs, handle)
+        print_fn(f"Fetched {len(docs)} sermons from Sanity (one query).")
+    print_fn("Checking the audio files in S3 ...")
+    rows, excluded = build_manifest(docs)
+    with open(os.path.join(out_dir, "manifest.json"), "w") as handle:
+        json.dump(rows, handle, indent=1)
+    text = report(rows, excluded)
+    with open(os.path.join(out_dir, "report.txt"), "w") as handle:
+        handle.write(text + "\n")
+    print_fn("\n" + text)
+    print_fn(f"\nWrote {out_dir}/manifest.json and report.txt")
+    return 0
+
+
 def main(argv=None, input_fn=input, print_fn=print):
     args = build_parser().parse_args(argv)
     if args.command == "setup":
         return run_setup(print_fn)
+    if args.command == "manifest":
+        try:
+            return run_manifest(args, print_fn)
+        except CliError as error:
+            print_fn(f"\n{error}")
+            return 1
     try:
         ensure_ffmpeg()
         return run_audio(args, input_fn=input_fn, print_fn=print_fn)
