@@ -71,6 +71,21 @@ def build_parser():
         "--refresh", action="store_true", help="Query Sanity again instead of using the saved copy"
     )
 
+    transcribe = commands.add_parser(
+        "transcribe",
+        help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
+    )
+    transcribe.add_argument("input", help="The audio file the times will belong to")
+    transcribe.add_argument("--date", required=True, help="Sermon date as YYYY-MM-DD")
+    transcribe.add_argument("--sermon-id", help="Published Sanity _id (default: the date)")
+    transcribe.add_argument(
+        "--output-dir", help="Where to write the files (default: output/transcripts)"
+    )
+    transcribe.add_argument(
+        "--from-raw",
+        help="Skip the speech engine and build from a pilot results file (pilot/results/DATE.MODEL.json)",
+    )
+
     audio = commands.add_parser(
         "audio", help="Trim, fade, normalize and add intro/outro to a recording"
     )
@@ -417,10 +432,56 @@ def run_manifest(args, print_fn=print):
     return 0
 
 
+def run_transcribe(args, print_fn=print):
+    """Writes DATE.transcript.json and DATE.vtt for one audio file (DT-247)."""
+    import datetime
+
+    from app.transcripts.build import build_transcript
+    from app.transcripts import engine_mlx
+    from app.transcripts.export import audio_info, validate, write_exports
+
+    date = validate_date(args.date)
+    path = os.path.expanduser(args.input)
+    duration = probe_audio_duration(path)
+    started = time.time()
+    if args.from_raw:
+        raw, model = engine_mlx.words_from_pilot_result(os.path.expanduser(args.from_raw))
+    else:
+        print_fn(f"Transcribing {os.path.basename(path)} ({format_timestamp(duration)}) ...")
+        raw, model = engine_mlx.transcribe(path)
+    transcript = build_transcript(
+        raw,
+        sermon_id=args.sermon_id or date,
+        date=date,
+        audio=audio_info(path, duration),
+        model=model,
+        generated_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    )
+    validate(transcript, os.path.join(ROOT, "config", "transcript_schema.json"))
+    out_dir = os.path.expanduser(args.output_dir) if args.output_dir else os.path.join(DEFAULT_OUTPUT_DIR, "transcripts")
+    json_path, vtt_path = write_exports(transcript, out_dir, date)
+    print_fn(
+        f"{transcript['word_count']} words in {len(transcript['paragraphs'])} paragraphs "
+        f"({time.time() - started:.0f}s).\n  {json_path}\n  {vtt_path}"
+    )
+    return 0
+
+
 def main(argv=None, input_fn=input, print_fn=print):
     args = build_parser().parse_args(argv)
     if args.command == "setup":
         return run_setup(print_fn)
+    if args.command == "transcribe":
+        try:
+            ensure_ffmpeg()
+            return run_transcribe(args, print_fn)
+        except (CliError, ValueError, RuntimeError) as error:
+            print_fn(f"\n{error}")
+            return 1
+        except ImportError as error:
+            package = getattr(error, "name", None) or "a required package"
+            print_fn(f"\nMissing Python package '{package}'. For transcription run: pip install mlx-whisper jsonschema")
+            return 1
     if args.command == "manifest":
         try:
             return run_manifest(args, print_fn)

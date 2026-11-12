@@ -11,3 +11,9 @@ static-ffmpeg
 
 # Free, on-computer speech-to-text for automatic trim.
 faster-whisper
+
+# Transcript export (`sermon transcribe`). jsonschema validates the output.
+jsonschema
+
+# GPU speech-to-text for the archive (large-v3-turbo). Apple Silicon only.
+mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
