@@ -71,6 +71,18 @@ def build_parser():
         "--refresh", action="store_true", help="Query Sanity again instead of using the saved copy"
     )
 
+    batch = commands.add_parser(
+        "batch",
+        help="Transcribe the whole archive from the manifest. Resumable: stop any time, run again to continue",
+    )
+    batch.add_argument("--manifest", help="Manifest file (default: output/archive/manifest.json from `sermon manifest`)")
+    batch.add_argument("--dry-run", action="store_true", help="Show what would be done and change nothing")
+    batch.add_argument("--limit", type=int, help="Do at most this many sermons in this run")
+    batch.add_argument("--only", nargs="+", default=[], help="Only these sermon IDs or dates")
+    batch.add_argument("--years", nargs="+", default=[], help="Only these years, for example 2020 2021")
+    batch.add_argument("--redo", nargs="+", default=[], help="Transcribe these sermon IDs again")
+    batch.add_argument("--retry-failed", action="store_true", help="Retry sermons that already failed 3 times")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -432,6 +444,49 @@ def run_manifest(args, print_fn=print):
     return 0
 
 
+def run_batch(args, print_fn=print):
+    """Resumable archive transcription (DT-248)."""
+    from app.archive import batch as archive_batch
+    from app.transcripts import engine_mlx
+
+    archive_dir = os.path.join(DEFAULT_OUTPUT_DIR, "archive")
+    manifest_path = os.path.expanduser(args.manifest) if args.manifest else os.path.join(archive_dir, "manifest.json")
+    if not os.path.exists(manifest_path):
+        raise CliError(f"No manifest at {manifest_path}. Run: python3 sermon manifest --env-file <file with the Sanity token>")
+    with open(manifest_path) as handle:
+        rows = json.load(handle)
+    state_path = os.path.join(archive_dir, "batch_state.json")
+    state = archive_batch.load_state(state_path)
+    todo, skipped = archive_batch.plan(
+        rows, archive_dir, state, redo=set(args.redo), retry_failed=args.retry_failed,
+        only=set(args.only), years=set(args.years), limit=args.limit,
+    )
+    if args.dry_run:
+        print_fn(archive_batch.dry_run_text(todo, skipped))
+        return 0
+    if not todo:
+        print_fn("Nothing to do.\n" + archive_batch.report(rows, archive_dir, state, skipped))
+        return 0
+    print_fn(f"Transcribing {len(todo)} sermons. Stop any time with Ctrl+C and run the same command to continue.")
+    cache_dir = os.path.join(CACHE_DIR, "archive")
+    started = time.time()
+    try:
+        done = archive_batch.run(
+            todo, archive_dir, cache_dir, state, state_path,
+            transcribe_fn=lambda path: engine_mlx.transcribe(path), duration_fn=probe_audio_duration, print_fn=print_fn,
+        )
+    except KeyboardInterrupt:
+        print_fn("\nStopped. The sermon in progress was not saved; run the same command to continue.")
+        done = None
+    text = archive_batch.report(rows, archive_dir, state, skipped)
+    with open(os.path.join(archive_dir, "batch_report.txt"), "w") as handle:
+        handle.write(text + "\n")
+    print_fn(f"\n{text}")
+    if done is not None:
+        print_fn(f"\nDone: {done} transcribed in {archive_batch.format_duration(time.time() - started)}.")
+    return 130 if done is None else 0
+
+
 def run_transcribe(args, print_fn=print):
     """Writes DATE.transcript.json and DATE.vtt for one audio file (DT-247)."""
     import datetime
@@ -471,10 +526,10 @@ def main(argv=None, input_fn=input, print_fn=print):
     args = build_parser().parse_args(argv)
     if args.command == "setup":
         return run_setup(print_fn)
-    if args.command == "transcribe":
+    if args.command in ("transcribe", "batch"):
         try:
             ensure_ffmpeg()
-            return run_transcribe(args, print_fn)
+            return run_batch(args, print_fn) if args.command == "batch" else run_transcribe(args, print_fn)
         except (CliError, ValueError, RuntimeError) as error:
             print_fn(f"\n{error}")
             return 1

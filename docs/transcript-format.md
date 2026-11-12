@@ -66,5 +66,39 @@ times never overlap. ffmpeg parses the output.
 - Confidence is the engine's per-word probability. It is not a measured error
   rate.
 - The engine can drop stretches of speech. The pilot saw a few 10 second
-  windows (DT-248 adds a check).
+  windows. The batch report lists sparse stretches as a hint (see "Batch Mode").
 - Times next to music can be off by about a second.
+
+## Batch Mode (DT-248)
+
+```bash
+python3 sermon manifest --env-file <file with the Sanity token>   # once, and after Sanity changes
+python3 sermon batch --dry-run                                     # what would happen
+python3 sermon batch                                               # the full archive
+```
+
+- Reads `output/archive/manifest.json`. Only sermons with status `ready` run.
+  Blocked sermons are listed in the report, never transcribed.
+- Order: newest first. For each sermon: download from the public bucket to
+  `cache/archive/`, transcribe, write the export, delete the download.
+- Output: `output/archive/transcripts/<sermon_id>/DATE.transcript.json` and
+  `DATE.vtt`. A sermon is done when its transcript JSON exists.
+- State and report: `output/archive/batch_state.json` (per sermon: status,
+  attempts, seconds, words, warnings) and `batch_report.txt`.
+- **Stopping.** Press Ctrl+C at any time. The sermon in progress is not saved and
+  its download is removed. Run the same command to continue. Finished sermons are
+  skipped, so a second run on a finished archive does nothing.
+- **Failures.** A failed sermon is logged with its error and the batch carries
+  on. The next run retries it. After 3 failures it is skipped until you pass
+  `--retry-failed`.
+- **Shared files.** If two sermons store the same audio file, only the newer one
+  is transcribed and the other is skipped with the reason `shared_file`. Decide
+  which sermon the file belongs to in Sanity.
+- **Sparse stretches.** After each sermon the batch counts words in 20 second
+  windows (skipping the first and last 90 seconds). A window with under 15
+  words (the pilot median was 55) is listed in the report as a possible dropped
+  stretch. It can also be silence or music. It is a hint, not proof.
+- Options: `--limit N`, `--only ID_OR_DATE ...`, `--years 2020 2021`, `--redo ID ...`,
+  `--retry-failed`, `--manifest PATH`, `--dry-run`.
+- Time: about 2 minutes per 40 minute sermon on an M1 Max in the pilot. The
+  progress line shows an estimate from the sermons done in this run.
