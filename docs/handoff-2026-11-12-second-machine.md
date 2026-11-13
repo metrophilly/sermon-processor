@@ -17,10 +17,10 @@ why. This doc is only about setup and running.
 Both have enough memory for large-v3 (about 3 GB). Speed on B is untested.
 Expect it to be within about 20% of A, not clearly faster.
 
-**What is not in GitHub.** Everything under `pilot/` and the two
-`docs/handoff-2026-11-12-*.md` files are uncommitted on machine A. The
-`sermon-processor` repo on GitHub (`metrophilly/sermon-processor`) does not
-have them. Bring them over with the bundle below.
+**What is in GitHub.** The `pilot/` scripts, the handoff docs and the built tools
+(`sermon manifest`, `transcribe`, `batch`, `fixes`) are all on `main` in
+`metrophilly/sermon-processor`. Not in GitHub: `pilot/audio/`, virtual
+environments and `output/`.
 
 **What you do not need.** No AWS login. The sermon audio is public by URL.
 No Replicate account. No Sanity token. Everything here is free.
@@ -33,19 +33,16 @@ No Replicate account. No Sanity token. Everything here is free.
 brew install ffmpeg python@3.12
 ```
 
-2. Get the code and the pilot files. The bundle `sermon-pilot-bundle.tgz`
-   (in `~/Downloads` on machine A) holds the `pilot/` folder without audio or
-   virtual environments, plus the two handoff docs. Copy it to machine B by
-   AirDrop, then:
+2. Get the code.
 
 ```bash
 git clone https://github.com/metrophilly/sermon-processor.git ~/src/METRO/sermon-processor
 cd ~/src/METRO/sermon-processor
-tar xzf ~/Downloads/sermon-pilot-bundle.tgz
 ```
 
-   If the repo is not cloned, create the folder and extract the bundle there.
-   The pilot scripts do not need the rest of the repo.
+   For a split archive run, use `sermon batch --years 2012 2013 ...` on each
+   machine so the two never do the same sermon. Each machine needs its own
+   `output/archive/manifest.json` (`sermon manifest --env-file ...`).
 
 3. Create the GPU environment and check the audio URLs:
 
@@ -154,8 +151,7 @@ Also note the chip in the message, because the speed column depends on it.
   (needs a `faster-whisper` environment or any Python 3, standard library
   only).
 - The speed estimates here are expectations, not measurements.
-- The `pilot/yt/` captions and `pilot/audio/` files are not in the bundle.
-  Audio comes from `fetch_audio.py`.
+- `pilot/audio/` is not in GitHub. Audio comes from `fetch_audio.py`.
 
 ## Files
 

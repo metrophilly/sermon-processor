@@ -2,7 +2,8 @@
 
 Findings from the DT-246 pilot, the YouTube caption check and the vocabulary
 test. Read after `docs/handoff-2026-11-05.md`, which covers the `sermon audio`
-tool and the overall plan. Everything here is uncommitted in `pilot/`.
+tool and the overall plan. The pilot files are committed in `pilot/`. The
+built tools are in `app/` (see "Built Since The Pilot").
 
 ## Start Here
 
@@ -261,34 +262,47 @@ checked exactly as stored, never silently replaced.
 - Not yet checked: that every file is a full sermon (the 2019-07-07 file is 21
   minutes), and duplicate slugs across all 760 documents.
 
+## Built Since The Pilot
+
+All committed and pushed to `main`. Format and usage are in
+`docs/transcript-format.md`.
+
+| Issue | What | Command |
+| --- | --- | --- |
+| DT-245 | Manifest of 702 sermons, S3 existence check, problems list | `sermon manifest` |
+| DT-247 | Transcript JSON (raw layer, stable IDs) and VTT | `sermon transcribe` |
+| DT-248 | Resumable batch, newest first, Ctrl+C safe, failure report | `sermon batch` |
+| DT-249 | Shared fix list, edited layer, raw never changed | `sermon fixes` |
+
+The batch ran for real on 6 sermons (2 to 2.5 minutes each). A real Ctrl+C was
+tested and resumed. The 6 outputs are in `output/archive/transcripts/` (not in
+git).
+
 ## Still Open
 
-- [x] Paul marked the review sheet. Scored on 12 Nov.
-- [x] Choose the model for the full run (DT-246): `large-v3-turbo` via
-  `mlx-whisper`, decided by Paul on 12 Nov 2026. Record the decision and the
-  pilot table on DT-246 and close it.
-- [ ] Handle dropped speech. Turbo still dropped 2 windows (73 words) in the
-  pilot. Options: a post-run check that flags 10 second windows with far fewer
-  words than expected, or rerun flagged files with `small.en` and merge.
-- [ ] `large-v3` (full) was not run. A partial 0.9 GB download of
-  `mlx-community/whisper-large-v3-mlx` is in `~/.cache/huggingface/hub` (a
-  hash-checked resume script is `pilot/dl_hf.sh`). Delete it to free space.
-- [ ] Try `mlx-whisper` or `whisper.cpp` on one file for speed.
-- [ ] Decide on the 9 missing files, 2 swapped dates and the short 2019 file.
-- [ ] Build the manifest with an S3 existence check (DT-245).
-- [ ] DT-243 checks: Supabase support for `pgvector` and `pg_trgm`, duplicate
-  slug query, coordination with the Sermons Expansion project.
-- [ ] Read the Sunday plan sheet for title, passage and speaker columns.
-- [ ] Add `pilot/audio/` to `.gitignore`. Commit nothing until Paul asks.
+- [ ] Run the full archive (DT-251), about 25 hours on the M1 Max for 693
+  sermons. The M4 Pro can take half the years (see the second-machine doc).
+  Not started.
+- [ ] Dropped speech. Turbo still dropped 2 windows (73 words) in the pilot. The
+  batch lists sparse 20 second windows as a hint. It is not proof.
+- [ ] Fix list: only 3 kinds of rule so far (web address, hyphen, spoken
+  numbers before books). Grow it after the full run. Names and Greek words from
+  `pilot/vocab.json` showed no repeat errors in the 6 recent transcripts. Older
+  sermons (2012 to 2017) are the likely place for them.
+- [ ] Prompting the engine with vocabulary does not help (see "Vocabulary
+  Test"). DT-249's first done-when ("fewer errors with vocabulary on") is not
+  met and will not be.
+- [ ] Data problems: 9 blocked sermons (8 `Ch 19.mp3`, 1 with no path), 6 date
+  mismatches, 2 sermons sharing one file (2012-08-26, 2012-09-02), 2 sermons on
+  2024-12-15, and a 21 minute file on 2019-07-07.
+- [ ] Postgres import (DT-252, DT-253) and the mirror (DT-244).
+- [ ] DT-243 checks: Supabase `pgvector` and `pg_trgm`, duplicate slug query,
+  coordination with the Sermons Expansion project, Sunday plan sheet columns.
+- [ ] A partial 0.9 GB `large-v3` download is in `~/.cache/huggingface/hub`.
+  Delete it to free space.
 
 ## Next Steps In Order
 
-1. Close DT-246 with the table and the decision (`large-v3-turbo`).
-2. Build the manifest with an S3 existence check (DT-245).
-3. Build the transcript export (DT-247) and the resumable batch mode (DT-248)
-   on top of `pilot/run_mlx.py`: paragraphs, confidence, stable IDs,
-   `DATE.transcript.json` and `DATE.vtt`, plus a dropped-speech check and the
-   fix list (DT-249).
-4. Run the full archive (DT-251), about 28 hours of GPU time estimated on the
-   M1 Max. The M4 Pro can take half the years.
-5. Import into Postgres (DT-252, DT-253).
+1. Run the full archive (DT-251): `sermon batch --dry-run`, then `sermon batch`.
+2. Run `sermon fixes output/archive/transcripts` and review the edits.
+3. Import into Postgres (DT-252, DT-253).
