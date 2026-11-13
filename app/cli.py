@@ -90,6 +90,14 @@ def build_parser():
     fixes.add_argument("paths", nargs="+", help="Transcript JSON files, or folders to search (for example output/archive/transcripts)")
     fixes.add_argument("--dry-run", action="store_true", help="Show the edits and write nothing")
 
+    db_import = commands.add_parser(
+        "db-import",
+        help="Load sermons and transcripts into Postgres (DT-252). Reads local files only; --dry-run reports and writes nothing. Needs SERMON_DATABASE_URL to write",
+    )
+    db_import.add_argument("--dry-run", action="store_true", help="Report what would be imported and write nothing")
+    db_import.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
+    db_import.add_argument("--sanity", help="Sanity export (default: <archive>/sanity_sermons.json)")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -494,6 +502,34 @@ def run_batch(args, print_fn=print):
     return 130 if done is None else 0
 
 
+def run_db_import(args, print_fn=print):
+    """Loads sermons and transcripts into Postgres (DT-252). Reads local files only."""
+    import subprocess
+
+    from app.archive import db_import
+
+    archive = os.path.expanduser(args.archive)
+    sanity = os.path.expanduser(args.sanity) if args.sanity else os.path.join(archive, "sanity_sermons.json")
+    for path in (sanity, os.path.join(archive, "manifest.json"), os.path.join(archive, "transcripts")):
+        if not os.path.exists(path):
+            raise CliError(f"Not found: {path}")
+    commit = subprocess.run(
+        ["git", "log", "-1", "--format=%h", "--", "config/transcript_fixes.json"],
+        cwd=ROOT, capture_output=True, text=True,
+    ).stdout.strip() or None
+    plan = db_import.build_plan(archive, sanity, commit)
+    for line in db_import.report_lines(plan):
+        print_fn(line)
+    if args.dry_run:
+        print_fn("\nNothing written (dry run).")
+        return 0
+    url = os.environ.get("SERMON_DATABASE_URL")
+    if not url:
+        raise CliError("Set SERMON_DATABASE_URL to the database connection string, then run again.")
+    db_import.run_import(plan, url, print_fn)
+    return 0
+
+
 def run_fixes(args, print_fn=print):
     """Applies the shared fix list and writes DATE.edited.json next to each transcript (DT-249)."""
     from app.transcripts.fixes import apply_fixes, load_rules, write_edited
@@ -578,6 +614,12 @@ def main(argv=None, input_fn=input, print_fn=print):
         try:
             return run_fixes(args, print_fn)
         except (CliError, ValueError, OSError) as error:
+            print_fn(f"\n{error}")
+            return 1
+    if args.command == "db-import":
+        try:
+            return run_db_import(args, print_fn)
+        except (CliError, ValueError, OSError, RuntimeError) as error:
             print_fn(f"\n{error}")
             return 1
     if args.command == "manifest":
