@@ -98,6 +98,16 @@ def build_parser():
     db_import.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
     db_import.add_argument("--sanity", help="Sanity export (default: <archive>/sanity_sermons.json)")
 
+    search = commands.add_parser(
+        "search",
+        help="Ranked full-text search over the sermon transcripts in Postgres. Needs SERMON_DATABASE_URL",
+    )
+    search.add_argument("query", nargs="+", help='Words to find. Quote a phrase, use OR, or -word to exclude (for example: grace OR mercy -law)')
+    search.add_argument("--phrase", action="store_true", help="Match the words as one phrase, in order")
+    search.add_argument("--limit", type=int, default=15, help="Most results to show (default 15)")
+    search.add_argument("--per-sermon", type=int, default=2, help="Most results from one sermon (default 2)")
+    search.add_argument("--published", action="store_true", help="Only published sermons")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -502,6 +512,22 @@ def run_batch(args, print_fn=print):
     return 130 if done is None else 0
 
 
+def run_search(args, print_fn=print):
+    """Ranked full-text search over the transcripts in Postgres."""
+    from app.archive import db_search
+
+    url = os.environ.get("SERMON_DATABASE_URL")
+    if not url:
+        raise CliError("Set SERMON_DATABASE_URL to the database connection string, then run again.")
+    rows = db_search.search(
+        url, " ".join(args.query), limit=args.limit, per_sermon=args.per_sermon,
+        phrase=args.phrase, published_only=args.published,
+    )
+    for line in db_search.format_rows(rows):
+        print_fn(line)
+    return 0
+
+
 def run_db_import(args, print_fn=print):
     """Loads sermons and transcripts into Postgres (DT-252). Reads local files only."""
     import subprocess
@@ -614,6 +640,12 @@ def main(argv=None, input_fn=input, print_fn=print):
         try:
             return run_fixes(args, print_fn)
         except (CliError, ValueError, OSError) as error:
+            print_fn(f"\n{error}")
+            return 1
+    if args.command == "search":
+        try:
+            return run_search(args, print_fn)
+        except (CliError, ValueError, OSError, RuntimeError) as error:
             print_fn(f"\n{error}")
             return 1
     if args.command == "db-import":
