@@ -25,7 +25,7 @@ def test_fixes_web_address_and_hyphen_and_keeps_trailing_punctuation():
     t = make("visit us at MetroPhilly .org. We are a gospel -centered church")
     edited = fixes.apply_fixes(t, fixes.load_rules())
     text = edited["paragraphs"][0]["text"]
-    assert "MetroPhilly.org." in text and "gospel-centered" in text
+    assert "metrophilly.org." in text and "gospel-centered" in text
     assert edited["edit_count"] == 2
     assert edited["edits"][0]["word_ids"] == ["w000004", "w000005"]
 
@@ -69,3 +69,10 @@ def test_cli_writes_edited_file_and_leaves_raw_bytes_alone(tmp_path):
     edited = json.loads((tmp_path / "2026-01-04.edited.json").read_text())
     assert edited["edit_count"] == 1 and edited["layer"] == "edited"
     assert cli.main(["fixes", "--dry-run", str(tmp_path)], print_fn=out.append) == 0
+
+
+def test_joins_spaced_hyphens_and_thousands_but_not_after_punctuation():
+    t = make("a built -in plan, one -on -one, 10 ,000 times, 3 ,5 items and so, -note")
+    text = fixes.apply_fixes(t, fixes.load_rules())["paragraphs"][0]["text"]
+    assert "built-in" in text and "one-on-one," in text and "10,000" in text
+    assert "3 ,5" in text and "so, -note" in text

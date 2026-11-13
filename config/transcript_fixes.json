@@ -1,7 +1,8 @@
 {
   "_help": "Shared fix list. Each rule replaces a run of words in the EDITED layer only. The raw transcript is never changed. 'find' is the words in order (case does not matter, punctuation after the last word is kept). 'replace' is the new text. Add a rule when the same mistake shows up in more than one sermon.",
   "rules": [
-    {"id": "metrophilly-org", "find": ["MetroPhilly", ".org"], "replace": "MetroPhilly.org", "note": "The engine splits the web address. Seen 22 times in the pilot and first batch."},
+    {"id": "metrophilly-org", "find": ["MetroPhilly", ".org"], "replace": "metrophilly.org", "note": "The engine splits the web address. Written lowercase."},
+    {"id": "metrophilly-org-case", "find": ["MetroPhilly.org"], "replace": "metrophilly.org", "note": "Already one word. Written lowercase."},
     {"id": "gospel-centered", "find": ["gospel", "-centered"], "replace": "gospel-centered", "note": "The engine puts a space before the hyphen."},
     {"id": "1-samuel", "find": ["first", "Samuel"], "replace": "1 Samuel", "note": "Spoken number before a book name."},
     {"id": "2-samuel", "find": ["second", "Samuel"], "replace": "2 Samuel"},
@@ -19,6 +20,8 @@
     {"id": "2-peter", "find": ["second", "Peter"], "replace": "2 Peter"},
     {"id": "1-john", "find": ["first", "John"], "replace": "1 John"},
     {"id": "2-john", "find": ["second", "John"], "replace": "2 John"},
-    {"id": "3-john", "find": ["third", "John"], "replace": "3 John"}
+    {"id": "3-john", "find": ["third", "John"], "replace": "3 John"},
+    {"id": "harold-abrahams", "find": ["Harold", "Abrams"], "replace": "Harold Abrahams", "note": "Chariots of Fire runner. Seen 39 times."},
+    {"id": "first-dibs", "find": ["first", "divs"], "replace": "first dibs"}
   ]
 }

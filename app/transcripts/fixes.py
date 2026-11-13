@@ -41,6 +41,37 @@ def _split(text):
     return lead, stripped, core[len(stripped):]
 
 
+def _join_run(words, parsed, i):
+    """Built-in spacing fixes the engine leaves behind. Returns (rule id, word count) or None.
+
+    join-hyphen: "self -centered" -> "self-centered" (a word, then a word that starts with a hyphen and a letter).
+    join-thousands: "10 ,000" -> "10,000" (digits, then a comma and exactly three digits).
+    """
+    if i + 1 >= len(words):
+        return None
+    lead, core, trail = parsed[i]
+    if trail or not core:
+        return None
+    nxt = words[i + 1]["text"]
+    if core.isdigit() and not lead and len(nxt) >= 4 and nxt[0] == "," and nxt[1:4].isdigit():
+        tail = nxt[4:]
+        if not tail or not tail[0].isdigit():
+            return "join-thousands", 2
+    if core[-1].isalpha() and len(nxt) >= 2 and nxt[0] == "-" and nxt[1].isalpha():
+        n = 2
+        while True:
+            _, _, t = parsed[i + n - 1]
+            if t or i + n >= len(words):
+                break
+            more = words[i + n]["text"]
+            if len(more) >= 2 and more[0] == "-" and more[1].isalpha():
+                n += 1
+            else:
+                break
+        return "join-hyphen", n
+    return None
+
+
 def find_edits(words, rules):
     """List of edits over a word list. Earlier rules and earlier positions win; edits never overlap."""
     parsed = [_split(w["text"]) for w in words]
@@ -62,6 +93,20 @@ def find_edits(words, rules):
                 hit = (rule, n)
                 break
         if not hit:
+            run = _join_run(words, parsed, i)
+            if run:
+                rule_id, n = run
+                group = words[i : i + n]
+                edits.append(
+                    {
+                        "rule": rule_id,
+                        "word_ids": [w["id"] for w in group],
+                        "old": " ".join(w["text"] for w in group),
+                        "new": "".join(w["text"] for w in group),
+                    }
+                )
+                i += n
+                continue
             i += 1
             continue
         rule, n = hit
