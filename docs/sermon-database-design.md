@@ -92,18 +92,17 @@ A sermon with no transcript is simply a sermon whose `s3AudioPath` matches no cu
 | `textEdited` | text | After the fix list. Equals `textRaw` when there are no edits |
 | `edits` | jsonb, nullable | The edit list: rule, word IDs, old, new |
 | `avgConfidence` | float | |
-| `searchVector` | tsvector, generated | From `textEdited` |
 
-A fix-list change overwrites `textEdited`, `edits` and `searchVector` in place and updates `fixesCommit`. It does not create a transcript version. Analysis findings (DT-273) point at raw paragraph and word IDs, which never change.
+A fix-list change overwrites `textEdited` and `edits` in place and updates `fixesCommit`. It does not create a transcript version. Analysis findings (DT-273) point at raw paragraph and word IDs, which never change.
 
 Unique on (`transcriptId`, `paragraphId`). 25,311 rows in all, about 37 per sermon. Raw text is about 24 MB in total, and so is the edited text.
 
 ## Indexes
 
-- Full-text: GIN on `searchVector`.
+- Full-text: a GIN expression index on `to_tsvector('english', "textEdited")`. There is no stored search column. A query must use the same expression to hit the index: `WHERE to_tsvector('english', "textEdited") @@ websearch_to_tsquery('english', $1)`. A generated column was tried and dropped, because Prisma tries to drop its default on the next migration, which Postgres rejects.
 - Lookups: `sermon(spokenDate)`, `sermon(s3AudioPath)`, `sermon_paragraph(transcriptId, position)`.
 
-Prisma cannot express generated columns or partial unique indexes. These go in the migration as hand-written SQL, in the same file as the table creation. Before the first run, use `prisma migrate diff` against a scratch database, so a later `migrate dev` does not try to drop what Prisma does not know.
+Prisma cannot express a partial unique index or an expression index. These go in the migration as hand-written SQL, in the same file as the table creation. Before the first run, use `prisma migrate diff` against a scratch database, so a later `migrate dev` does not try to drop what Prisma does not know.
 
 ## Extensions
 
