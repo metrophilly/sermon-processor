@@ -1,0 +1,24 @@
+{
+  "_help": "Shared fix list. Each rule replaces a run of words in the EDITED layer only. The raw transcript is never changed. 'find' is the words in order (case does not matter, punctuation after the last word is kept). 'replace' is the new text. Add a rule when the same mistake shows up in more than one sermon.",
+  "rules": [
+    {"id": "metrophilly-org", "find": ["MetroPhilly", ".org"], "replace": "MetroPhilly.org", "note": "The engine splits the web address. Seen 22 times in the pilot and first batch."},
+    {"id": "gospel-centered", "find": ["gospel", "-centered"], "replace": "gospel-centered", "note": "The engine puts a space before the hyphen."},
+    {"id": "1-samuel", "find": ["first", "Samuel"], "replace": "1 Samuel", "note": "Spoken number before a book name."},
+    {"id": "2-samuel", "find": ["second", "Samuel"], "replace": "2 Samuel"},
+    {"id": "1-kings", "find": ["first", "Kings"], "replace": "1 Kings"},
+    {"id": "2-kings", "find": ["second", "Kings"], "replace": "2 Kings"},
+    {"id": "1-chronicles", "find": ["first", "Chronicles"], "replace": "1 Chronicles"},
+    {"id": "2-chronicles", "find": ["second", "Chronicles"], "replace": "2 Chronicles"},
+    {"id": "1-corinthians", "find": ["first", "Corinthians"], "replace": "1 Corinthians"},
+    {"id": "2-corinthians", "find": ["second", "Corinthians"], "replace": "2 Corinthians"},
+    {"id": "1-thessalonians", "find": ["first", "Thessalonians"], "replace": "1 Thessalonians"},
+    {"id": "2-thessalonians", "find": ["second", "Thessalonians"], "replace": "2 Thessalonians"},
+    {"id": "1-timothy", "find": ["first", "Timothy"], "replace": "1 Timothy"},
+    {"id": "2-timothy", "find": ["second", "Timothy"], "replace": "2 Timothy"},
+    {"id": "1-peter", "find": ["first", "Peter"], "replace": "1 Peter"},
+    {"id": "2-peter", "find": ["second", "Peter"], "replace": "2 Peter"},
+    {"id": "1-john", "find": ["first", "John"], "replace": "1 John"},
+    {"id": "2-john", "find": ["second", "John"], "replace": "2 John"},
+    {"id": "3-john", "find": ["third", "John"], "replace": "3 John"}
+  ]
+}

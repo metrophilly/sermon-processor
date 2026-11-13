@@ -83,6 +83,13 @@ def build_parser():
     batch.add_argument("--redo", nargs="+", default=[], help="Transcribe these sermon IDs again")
     batch.add_argument("--retry-failed", action="store_true", help="Retry sermons that already failed 3 times")
 
+    fixes = commands.add_parser(
+        "fixes",
+        help="Apply the shared fix list (config/transcript_fixes.json) to transcripts. Writes DATE.edited.json next to each; raw files are never changed",
+    )
+    fixes.add_argument("paths", nargs="+", help="Transcript JSON files, or folders to search (for example output/archive/transcripts)")
+    fixes.add_argument("--dry-run", action="store_true", help="Show the edits and write nothing")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -487,6 +494,36 @@ def run_batch(args, print_fn=print):
     return 130 if done is None else 0
 
 
+def run_fixes(args, print_fn=print):
+    """Applies the shared fix list and writes DATE.edited.json next to each transcript (DT-249)."""
+    from app.transcripts.fixes import apply_fixes, load_rules, write_edited
+
+    rules = load_rules()
+    files = []
+    for path in args.paths:
+        path = os.path.expanduser(path)
+        if os.path.isdir(path):
+            for folder, _, names in os.walk(path):
+                files += [os.path.join(folder, n) for n in sorted(names) if n.endswith(".transcript.json")]
+        else:
+            files.append(path)
+    if not files:
+        raise CliError("No transcript files found.")
+    total = 0
+    for path in sorted(files):
+        with open(path) as handle:
+            transcript = json.load(handle)
+        edited = apply_fixes(transcript, rules)
+        total += edited["edit_count"]
+        print_fn(f"{os.path.basename(path)}: {edited['edit_count']} fixes")
+        for edit in edited["edits"][:5] if args.dry_run else []:
+            print_fn(f"    {edit['rule']}: [{edit['old']}] -> [{edit['new']}]")
+        if not args.dry_run:
+            write_edited(edited, path.replace(".transcript.json", ".edited.json"))
+    print_fn(f"{total} fixes in {len(files)} transcripts." + (" Nothing written (dry run)." if args.dry_run else ""))
+    return 0
+
+
 def run_transcribe(args, print_fn=print):
     """Writes DATE.transcript.json and DATE.vtt for one audio file (DT-247)."""
     import datetime
@@ -536,6 +573,12 @@ def main(argv=None, input_fn=input, print_fn=print):
         except ImportError as error:
             package = getattr(error, "name", None) or "a required package"
             print_fn(f"\nMissing Python package '{package}'. For transcription run: pip install mlx-whisper jsonschema")
+            return 1
+    if args.command == "fixes":
+        try:
+            return run_fixes(args, print_fn)
+        except (CliError, ValueError, OSError) as error:
+            print_fn(f"\n{error}")
             return 1
     if args.command == "manifest":
         try:

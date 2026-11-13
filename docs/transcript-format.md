@@ -102,3 +102,24 @@ python3 sermon batch                                               # the full ar
   `--retry-failed`, `--manifest PATH`, `--dry-run`.
 - Time: about 2 minutes per 40 minute sermon on an M1 Max in the pilot. The
   progress line shows an estimate from the sermons done in this run.
+
+## Fix List (DT-249)
+
+```bash
+python3 sermon fixes output/archive/transcripts --dry-run   # show the edits
+python3 sermon fixes output/archive/transcripts             # write DATE.edited.json next to each transcript
+```
+
+- The list is `config/transcript_fixes.json`. Anyone can edit it. Each rule has an
+  `id`, `find` (words in order, case ignored) and `replace`. Add a rule when the
+  same mistake shows up in more than one sermon.
+- Output is the `edited` layer: a list of edits that point at word IDs, plus the
+  edited paragraph text. The raw `DATE.transcript.json` is never opened for
+  writing. A test checks its SHA-256 before and after.
+- A rule does not match across punctuation. "first, John said" is left alone.
+  "first John" becomes "1 John". Punctuation after the last word is kept.
+- First rules, from real output: the web address split ("MetroPhilly .org"), the
+  space before a hyphen ("gospel -centered") and spoken numbers before book
+  names. The 6 batch transcripts have 22 fixes in total.
+- Vocabulary prompting is not used. The pilot found it did not help (see the
+  pilot handoff). `pilot/vocab.json` stays as reference for spotting errors.
