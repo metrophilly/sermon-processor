@@ -22,6 +22,19 @@
     {"id": "2-john", "find": ["second", "John"], "replace": "2 John"},
     {"id": "3-john", "find": ["third", "John"], "replace": "3 John"},
     {"id": "harold-abrahams", "find": ["Harold", "Abrams"], "replace": "Harold Abrahams", "note": "Chariots of Fire runner. Seen 39 times."},
-    {"id": "first-dibs", "find": ["first", "divs"], "replace": "first dibs"}
+    {"id": "first-dibs", "find": ["first", "divs"], "replace": "first dibs"},
+    {"id": "metro-pres", "find": ["Metro", "Press"], "replace": "Metro Pres", "note": "Metro Presbyterian Church, the former name."},
+    {"id": "roseveare-e", "find": ["Helen", "Rosevere"], "replace": "Helen Roseveare"},
+    {"id": "roseveare-a", "find": ["Helen", "Rosevear"], "replace": "Helen Roseveare"},
+    {"id": "rephaites", "find": ["Rephites"], "replace": "Rephaites"},
+    {"id": "2nd-corinthians", "find": ["2nd", "Corinthians"], "replace": "2 Corinthians"},
+    {"id": "2nd-samuel", "find": ["2nd", "Samuel"], "replace": "2 Samuel"},
+    {"id": "zerubbabel-j", "find": ["Jerubabel"], "replace": "Zerubbabel"},
+    {"id": "zerubbabel-e", "find": ["Ereubbabel"], "replace": "Zerubbabel"},
+    {"id": "amminadab", "find": ["Minadab"], "replace": "Amminadab"},
+    {"id": "eliud", "find": ["Eliad"], "replace": "Eliud"},
+    {"id": "jedidiah", "find": ["Jedediah"], "replace": "Jedidiah"},
+    {"id": "ets-eights", "find": ["eights"], "replace": "ets", "note": "Hebrew for tree, spelled ets. All 15 uses are the Hebrew word."},
+    {"id": "ets-etz", "find": ["etz"], "replace": "ets"}
   ]
 }
