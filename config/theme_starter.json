@@ -1,0 +1,206 @@
+{
+ "_help": "Draft theme list for review. Edit freely. 'group' is for browsing only; the model tags themes, never groups. 'search_term' is the plain phrase people would type. 'definition' is a blank line to fill in: one sentence on what the theme means and one on what it is not. Status: draft or pending. Dropped as too general on 13 Nov 2026: sin, idolatry, the cross.",
+ "themes": [
+  {
+   "slug": "suffering",
+   "group": "Hard seasons",
+   "search_term": "suffering",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "anxiety",
+   "group": "Hard seasons",
+   "search_term": "anxiety",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "weakness",
+   "group": "Hard seasons",
+   "search_term": "weakness",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "hope",
+   "group": "Hard seasons",
+   "search_term": "hope",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "repentance",
+   "group": "Returning to God",
+   "search_term": "repentance",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "forgiveness",
+   "group": "Returning to God",
+   "search_term": "forgiveness",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "mercy",
+   "group": "Returning to God",
+   "search_term": "mercy",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "grace",
+   "group": "Returning to God",
+   "search_term": "grace",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "salvation",
+   "group": "Returning to God",
+   "search_term": "salvation",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "lostness",
+   "group": "Returning to God",
+   "search_term": "feeling lost",
+   "definition": "",
+   "status": "draft",
+   "extra_phrases": [
+    "lost sheep parable"
+   ]
+  },
+  {
+   "slug": "identity",
+   "group": "Heart and self",
+   "search_term": "identity",
+   "definition": "",
+   "status": "draft",
+   "extra_phrases": [
+    "identity in christ"
+   ]
+  },
+  {
+   "slug": "ambition",
+   "group": "Heart and self",
+   "search_term": "ambition",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "humility",
+   "group": "Heart and self",
+   "search_term": "humility",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "freedom",
+   "group": "Heart and self",
+   "search_term": "freedom",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "money",
+   "group": "Money",
+   "search_term": "money",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "generosity",
+   "group": "Money",
+   "search_term": "generosity",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "faith",
+   "group": "Walking with God",
+   "search_term": "faith",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "obedience",
+   "group": "Walking with God",
+   "search_term": "obedience",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "prayer",
+   "group": "Walking with God",
+   "search_term": "prayer",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "worship",
+   "group": "Walking with God",
+   "search_term": "worship",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "calling",
+   "group": "Walking with God",
+   "search_term": "calling",
+   "definition": "",
+   "status": "draft",
+   "extra_phrases": [
+    "finding your calling"
+   ]
+  },
+  {
+   "slug": "holiness",
+   "group": "Walking with God",
+   "search_term": "holiness",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "love",
+   "group": "Relationships",
+   "search_term": "love",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "friendship",
+   "group": "Relationships",
+   "search_term": "friendship",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "marriage",
+   "group": "Relationships",
+   "search_term": "marriage",
+   "definition": "",
+   "status": "draft"
+  },
+  {
+   "slug": "kingship",
+   "group": "Who God is",
+   "search_term": "kingship",
+   "definition": "",
+   "status": "draft",
+   "extra_phrases": [
+    "jesus as king"
+   ]
+  },
+  {
+   "slug": "providence",
+   "group": "Who God is",
+   "search_term": "gods providence",
+   "definition": "",
+   "status": "pending"
+  }
+ ]
+}

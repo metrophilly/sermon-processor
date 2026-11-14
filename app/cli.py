@@ -108,6 +108,20 @@ def build_parser():
     search.add_argument("--per-sermon", type=int, default=2, help="Most results from one sermon (default 2)")
     search.add_argument("--published", action="store_true", help="Only published sermons")
 
+    themes = commands.add_parser(
+        "themes",
+        help="Theme suggestions for sermons (DT-259): prepare the input, run a model, check quotes, write a review sheet",
+    )
+    themes.add_argument("action", choices=["prepare", "run", "check", "report", "phrases", "demand"],
+                        help="prepare: write each sermon's input. run: call a model that can be called from here (the API). check: verify quotes in raw.json. report: write the review sheet. phrases: write the search phrases for Keyword Planner. demand: join Keyword Planner and Search Console exports")
+    themes.add_argument("ids", nargs="*", help="Sermon IDs (default: the sermons in config/theme_pilot.json)")
+    themes.add_argument("--runner", choices=["subagent", "api"], default="subagent", help="Who runs the model (default: subagent, started from Claude Code)")
+    themes.add_argument("--model", help="Model name recorded with the results (api default: claude-sonnet-5-5)")
+    themes.add_argument("--planner", help="demand: Keyword Planner export file")
+    themes.add_argument("--gsc", help="demand: Search Console Queries.csv")
+    themes.add_argument("--threshold", type=int, default=1000, help="demand: monthly searches (lower bound) for a landing page candidate (default 1000)")
+    themes.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -512,6 +526,81 @@ def run_batch(args, print_fn=print):
     return 130 if done is None else 0
 
 
+def run_theme_demand(args, print_fn=print):
+    """Search phrases for the draft theme list, and the join with Keyword Planner and Search Console."""
+    from app.themes import demand
+
+    out_dir = os.path.join(DEFAULT_OUTPUT_DIR, "themes", "demand")
+    rows = demand.build_phrases(demand.load_themes())
+    if args.action == "phrases":
+        csv_path, txt_path = os.path.join(out_dir, "phrases.csv"), os.path.join(out_dir, "phrases.txt")
+        demand.write_phrase_files(rows, csv_path, txt_path)
+        print_fn(f"{len(rows)} phrases for {len({r['theme'] for r in rows})} themes.")
+        print_fn(f"Paste {txt_path} into Keyword Planner. Details: {csv_path}")
+        return 0
+    if not args.planner:
+        raise CliError("Give the Keyword Planner export with --planner FILE. Add --gsc FILE for Search Console.")
+    planner = demand.read_planner(os.path.expanduser(args.planner))
+    gsc = demand.read_gsc(os.path.expanduser(args.gsc)) if args.gsc else {}
+    summary = demand.join(rows, planner, gsc, args.threshold)
+    for line in demand.format_summary(summary, args.threshold):
+        print_fn(line)
+    path = os.path.join(out_dir, "demand.csv")
+    demand.write_summary(summary, path)
+    print_fn(f"\nWrote {path}")
+    return 0
+
+
+def run_themes(args, print_fn=print):
+    """Theme suggestions (DT-259). The passage is fixed first and every result is a suggestion."""
+    if args.action in ("phrases", "demand"):
+        return run_theme_demand(args, print_fn)
+
+    from app.themes import pilot
+
+    archive = os.path.expanduser(args.archive)
+    with open(os.path.join(ROOT, "config", "theme_pilot.json")) as handle:
+        pilot_config = json.load(handle)
+    ids = args.ids or [s["id"] for s in pilot_config["sermons"]]
+    out_dir = os.path.join(DEFAULT_OUTPUT_DIR, "themes", pilot_config["set"])
+    prompt_file = pilot.prompt_path()
+    if args.action == "prepare":
+        for ctx in pilot.prepare(archive, out_dir, ids):
+            folder = pilot.sermon_dir(out_dir, ctx["sermon_id"])
+            print_fn(f"{ctx['date']} {ctx['title']} ({ctx['word_count']} words)")
+            print_fn("  " + pilot.SubagentRunner.task_text(
+                prompt_file, os.path.join(folder, "input.md"), os.path.join(folder, "raw.json")))
+        return 0
+    if args.action == "run":
+        runner = pilot.RUNNERS[args.runner]()
+        if args.model:
+            runner.model = args.model
+        pilot.run_with(runner, archive, out_dir, ids, print_fn=print_fn)
+        return 0
+    if args.action == "check":
+        failed = 0
+        for sermon_id in ids:
+            try:
+                result = pilot.check_sermon(archive, out_dir, sermon_id, runner_name=args.runner, model=args.model)
+            except pilot.ThemeError as error:
+                failed += 1
+                print_fn(f"{sermon_id}: {error}")
+                continue
+            print_fn(f"{result['date']} {result['title']}: {len(result['themes'])} themes kept, "
+                     f"{len(result['dropped'])} dropped, {len(result['problems'])} problems")
+            for theme in result["themes"]:
+                print_fn(f"    {theme['label']} ({theme['confidence']})")
+            for problem in result["problems"]:
+                print_fn(f"    ! {problem}")
+        return 1 if failed else 0
+    report = pilot.report_markdown(archive, out_dir, ids)
+    path = os.path.join(out_dir, "report.md")
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(report)
+    print_fn(f"Wrote {path}")
+    return 0
+
+
 def run_search(args, print_fn=print):
     """Ranked full-text search over the transcripts in Postgres."""
     from app.archive import db_search
@@ -640,6 +729,12 @@ def main(argv=None, input_fn=input, print_fn=print):
         try:
             return run_fixes(args, print_fn)
         except (CliError, ValueError, OSError) as error:
+            print_fn(f"\n{error}")
+            return 1
+    if args.command == "themes":
+        try:
+            return run_themes(args, print_fn)
+        except (CliError, ValueError, OSError, RuntimeError, KeyError) as error:
             print_fn(f"\n{error}")
             return 1
     if args.command == "search":

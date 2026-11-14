@@ -1,0 +1,12 @@
+{
+  "_help": "Pilot set for theme suggestions (DT-259). The first two sermons of each of the last three real series by date. The Standalone sentinel series is skipped. Chosen 13 Nov 2026.",
+  "set": "pilot",
+  "sermons": [
+    {"id": "74c99260-ecbc-4d95-8dd9-2a7f6e765670", "note": "2026-11-01 A Culture of Giving: Money and Its Power (Mark 10:17-27)"},
+    {"id": "6d34cce8-b954-49af-ae0d-3606ff0ea58a", "note": "2026-11-08 A Culture of Giving: Money as an Idol (Genesis 13:1-18)"},
+    {"id": "47e9fedd-37e8-48be-9e54-d7d0f4cd0d0d", "note": "2026-08-30 The Gospel According To Moses: Slavery (Exodus 1-2)"},
+    {"id": "e0c14a45-860c-4c4c-96ac-bf50d8c5e879", "note": "2026-09-06 The Gospel According To Moses: Searching (Exodus 3:1-15)"},
+    {"id": "cab2ccac-7a79-4d1a-b397-2ba73c986fc3", "note": "2026-04-12 Our Core Values: The Gospel: Sonship (Luke 15)"},
+    {"id": "7b18cc11-51f3-4a05-b661-2c5dca94f5bf", "note": "2026-04-19 Our Core Values: The Gospel: Friendship (John 21:1-19)"}
+  ]
+}
