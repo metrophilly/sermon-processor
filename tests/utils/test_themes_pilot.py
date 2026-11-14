@@ -55,3 +55,32 @@ def test_runners_share_one_interface_and_the_subagent_runner_is_manual():
     with pytest.raises(pilot.ThemeError):
         pilot.SubagentRunner().run("p", "i")
     assert "raw.json" in pilot.SubagentRunner.task_text("p.md", "i.md", "raw.json")
+
+
+def test_v2_check_enforces_the_list_the_series_rule_and_proposals():
+    allowed = ["money", "generosity", "identity", "ambition"]
+
+    def theme(label):
+        return {"label": label, "why": "w", "confidence": "high",
+                "evidence": [{"paragraph_id": "p002", "quote": "Money is the gospel -centered test."}]}
+
+    checked = pilot.check_result({"themes": [theme("money"), theme("generosity")]}, PARAGRAPHS, allowed=allowed,
+                                 series_themes=["money", "generosity"], max_themes=4)
+    assert any("no theme specific" in p for p in checked["problems"])
+    checked = pilot.check_result({"themes": [theme("money"), theme("identity")]}, PARAGRAPHS, allowed=allowed,
+                                 series_themes=["money", "generosity"])
+    assert not checked["problems"]
+    checked = pilot.check_result({"themes": [theme("worship")]}, PARAGRAPHS, allowed=allowed)
+    assert checked["themes"] == [] and "not on the theme list" in checked["dropped"][0]["problems"]
+    proposal = {"label": "wealth and power", "meaning": "m", "why_no_listed_theme_fits": "w",
+                "evidence": [{"paragraph_id": "p002", "quote": "Money is the gospel -centered test."}]}
+    checked = pilot.check_result({"themes": [theme("money")], "proposed_themes": [proposal, {**proposal, "label": "status"}]},
+                                 PARAGRAPHS, allowed=allowed)
+    assert [p["label"] for p in checked["proposed_themes"]] == ["status"] and len(checked["dropped_proposals"]) == 1
+
+
+def test_v2_input_lists_the_approved_themes_and_the_series_hint():
+    ctx = {"date": "d", "speaker": "s", "series": "A Culture of Giving", "title": "t", "passage": "p", "paragraphs": PARAGRAPHS}
+    text = pilot.build_input(ctx, [{"slug": "money", "definition": "Wealth."}], {"A Culture of Giving": ["money", "generosity"]})
+    assert "- money: Wealth." in text and "money, generosity" in text
+    assert "Approved theme list" not in pilot.build_input(ctx)

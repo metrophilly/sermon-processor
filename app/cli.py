@@ -112,11 +112,12 @@ def build_parser():
         "themes",
         help="Theme suggestions for sermons (DT-259): prepare the input, run a model, check quotes, write a review sheet",
     )
-    themes.add_argument("action", choices=["prepare", "run", "check", "report", "phrases", "demand"],
-                        help="prepare: write each sermon's input. run: call a model that can be called from here (the API). check: verify quotes in raw.json. report: write the review sheet. phrases: write the search phrases for Keyword Planner. demand: join Keyword Planner and Search Console exports")
+    themes.add_argument("action", choices=["prepare", "run", "check", "report", "compare", "phrases", "demand"],
+                        help="prepare: write each sermon's input. run: call a model that can be called from here (the API). check: verify quotes in raw.json. report: write the review sheet. compare: put two prompt versions side by side. phrases: write the search phrases for Keyword Planner. demand: join Keyword Planner and Search Console exports")
     themes.add_argument("ids", nargs="*", help="Sermon IDs (default: the sermons in config/theme_pilot.json)")
     themes.add_argument("--runner", choices=["subagent", "api"], default="subagent", help="Who runs the model (default: subagent, started from Claude Code)")
     themes.add_argument("--model", help="Model name recorded with the results (api default: claude-sonnet-5-5)")
+    themes.add_argument("--prompt", default="v1", help="Prompt version (v1, v2). Results for v2 go to a separate folder")
     themes.add_argument("--planner", help="demand: Keyword Planner export file")
     themes.add_argument("--gsc", help="demand: Search Console Queries.csv")
     themes.add_argument("--threshold", type=int, default=1000, help="demand: monthly searches (lower bound) for a landing page candidate (default 1000)")
@@ -562,10 +563,12 @@ def run_themes(args, print_fn=print):
     with open(os.path.join(ROOT, "config", "theme_pilot.json")) as handle:
         pilot_config = json.load(handle)
     ids = args.ids or [s["id"] for s in pilot_config["sermons"]]
-    out_dir = os.path.join(DEFAULT_OUTPUT_DIR, "themes", pilot_config["set"])
-    prompt_file = pilot.prompt_path()
+    version = args.prompt
+    set_name = pilot_config["set"] if version == "v1" else f"{pilot_config['set']}-{version}"
+    out_dir = os.path.join(DEFAULT_OUTPUT_DIR, "themes", set_name)
+    prompt_file = pilot.prompt_path(version)
     if args.action == "prepare":
-        for ctx in pilot.prepare(archive, out_dir, ids):
+        for ctx in pilot.prepare(archive, out_dir, ids, version):
             folder = pilot.sermon_dir(out_dir, ctx["sermon_id"])
             print_fn(f"{ctx['date']} {ctx['title']} ({ctx['word_count']} words)")
             print_fn("  " + pilot.SubagentRunner.task_text(
@@ -575,13 +578,13 @@ def run_themes(args, print_fn=print):
         runner = pilot.RUNNERS[args.runner]()
         if args.model:
             runner.model = args.model
-        pilot.run_with(runner, archive, out_dir, ids, print_fn=print_fn)
+        pilot.run_with(runner, archive, out_dir, ids, version=version, print_fn=print_fn)
         return 0
     if args.action == "check":
         failed = 0
         for sermon_id in ids:
             try:
-                result = pilot.check_sermon(archive, out_dir, sermon_id, runner_name=args.runner, model=args.model)
+                result = pilot.check_sermon(archive, out_dir, sermon_id, runner_name=args.runner, model=args.model, version=version)
             except pilot.ThemeError as error:
                 failed += 1
                 print_fn(f"{sermon_id}: {error}")
@@ -593,6 +596,16 @@ def run_themes(args, print_fn=print):
             for problem in result["problems"]:
                 print_fn(f"    ! {problem}")
         return 1 if failed else 0
+    if args.action == "compare":
+        base = os.path.join(DEFAULT_OUTPUT_DIR, "themes")
+        text = pilot.compare_markdown(archive, os.path.join(base, pilot_config["set"]),
+                                      os.path.join(base, f"{pilot_config['set']}-v2"), ids)
+        path = os.path.join(base, f"{pilot_config['set']}-v2", "compare.md")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        print_fn(text)
+        print_fn(f"\nWrote {path}")
+        return 0
     report = pilot.report_markdown(archive, out_dir, ids)
     path = os.path.join(out_dir, "report.md")
     with open(path, "w", encoding="utf-8") as handle:

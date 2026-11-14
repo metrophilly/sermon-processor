@@ -1,0 +1,4 @@
+{
+  "_help": "Themes already known to run through a series, given to the model as context. A hint is a candidate, not a result: every tag still needs evidence from the sermon. Only set where the series theme is clear. Draft, 14 Nov 2026.",
+  "A Culture of Giving": ["money", "generosity"]
+}

@@ -1,206 +1,233 @@
 {
- "_help": "Draft theme list for review. Edit freely. 'group' is for browsing only; the model tags themes, never groups. 'search_term' is the plain phrase people would type. 'definition' is a blank line to fill in: one sentence on what the theme means and one on what it is not. Status: draft or pending. Dropped as too general on 13 Nov 2026: sin, idolatry, the cross.",
+ "_help": "Theme list, accepted by Paul as the starting point on 14 Nov 2026 and open to change. 'group' is for browsing only; the model tags themes, never groups. 'search_term' is the plain phrase people would type. 'definition' says what the theme means and what it is not; they are drafts. Status: draft or pending. Dropped as too general: sin, idolatry, the cross.",
  "themes": [
   {
    "slug": "suffering",
    "group": "Hard seasons",
    "search_term": "suffering",
-   "definition": "",
-   "status": "draft"
+   "definition": "Pain, loss and hardship, and God's presence in them. Not: ordinary difficulty, or a passing mention of trials.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "anxiety",
    "group": "Hard seasons",
    "search_term": "anxiety",
-   "definition": "",
-   "status": "draft"
+   "definition": "Worry and fear, and the peace God gives. Not: a passing call to trust God.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "weakness",
    "group": "Hard seasons",
    "search_term": "weakness",
-   "definition": "",
-   "status": "draft"
+   "definition": "Human limits, brokenness and dependence, and God working through them. Not: sin.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "hope",
    "group": "Hard seasons",
    "search_term": "hope",
-   "definition": "",
-   "status": "draft"
+   "definition": "Confidence in what God will do, including resurrection and the future. Not: general optimism or comfort.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "repentance",
    "group": "Returning to God",
    "search_term": "repentance",
-   "definition": "",
-   "status": "draft"
+   "definition": "Turning from sin and back to God. Not: guilt alone, or a passing call to repent.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "forgiveness",
    "group": "Returning to God",
    "search_term": "forgiveness",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's pardon of sin and the call to forgive others. Not: grace in general.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "mercy",
    "group": "Returning to God",
    "search_term": "mercy",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's compassion toward the needy, and showing it. Not: pardon of sin as such.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "grace",
    "group": "Returning to God",
    "search_term": "grace",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's undeserved favor, when it is the sermon's focus. Not: the background reminder that we are saved by grace.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "salvation",
    "group": "Returning to God",
    "search_term": "salvation",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's rescue of his people, from the exodus to the cross. Not: grace or forgiveness alone.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "lostness",
    "group": "Returning to God",
    "search_term": "feeling lost",
-   "definition": "",
+   "definition": "Being far from God, wandering or searching, and being found. Not: general confusion.",
    "status": "draft",
    "extra_phrases": [
     "lost sheep parable"
-   ]
+   ],
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "identity",
    "group": "Heart and self",
    "search_term": "identity",
-   "definition": "",
+   "definition": "Who a person is in Christ, against worth sought elsewhere. Not: ambition or money, unless worth is the question.",
    "status": "draft",
    "extra_phrases": [
     "identity in christ"
-   ]
+   ],
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "ambition",
    "group": "Heart and self",
    "search_term": "ambition",
-   "definition": "",
-   "status": "draft"
+   "definition": "Drive to achieve or advance, and where it leads. Not: money, unless the drive is the point.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "humility",
    "group": "Heart and self",
    "search_term": "humility",
-   "definition": "",
-   "status": "draft"
+   "definition": "A lowly view of oneself before God and others. Not: weakness.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "freedom",
    "group": "Heart and self",
    "search_term": "freedom",
-   "definition": "",
-   "status": "draft"
+   "definition": "Release from slavery to sin and other masters. Not: salvation in general.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "money",
    "group": "Money",
    "search_term": "money",
-   "definition": "",
-   "status": "draft"
+   "definition": "Wealth, possessions and how we hold them. Not: giving, which is generosity.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "generosity",
    "group": "Money",
    "search_term": "generosity",
-   "definition": "",
-   "status": "draft"
+   "definition": "Giving of money, time and self. Not: money in general.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "faith",
    "group": "Walking with God",
    "search_term": "faith",
-   "definition": "",
-   "status": "draft"
+   "definition": "Trusting God and his promises, when it is the focus. Not: belief assumed as the basis of everything.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "obedience",
    "group": "Walking with God",
    "search_term": "obedience",
-   "definition": "",
-   "status": "draft"
+   "definition": "Doing what God commands, and why. Not: general moral advice.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "prayer",
    "group": "Walking with God",
    "search_term": "prayer",
-   "definition": "",
-   "status": "draft"
+   "definition": "Speaking with God: its practice, content and the God who hears. Not: a closing prayer.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "worship",
    "group": "Walking with God",
    "search_term": "worship",
-   "definition": "",
-   "status": "draft"
+   "definition": "Giving God the honor he is due, in gathering and in life. Not: the order of a service.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "calling",
    "group": "Walking with God",
    "search_term": "calling",
-   "definition": "",
+   "definition": "God's summons of a person or people, and the response. Not: a job or career choice alone.",
    "status": "draft",
    "extra_phrases": [
     "finding your calling"
-   ]
+   ],
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "holiness",
    "group": "Walking with God",
    "search_term": "holiness",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's set-apartness and a life set apart to him. Not: rule keeping.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "love",
    "group": "Relationships",
    "search_term": "love",
-   "definition": "",
-   "status": "draft"
+   "definition": "God's love for us and love toward others, when it is the main subject. Not: friendship or marriage.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "friendship",
    "group": "Relationships",
    "search_term": "friendship",
-   "definition": "",
-   "status": "draft"
+   "definition": "Close companionship, with God and with others. Not: love in general.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "marriage",
    "group": "Relationships",
    "search_term": "marriage",
-   "definition": "",
-   "status": "draft"
+   "definition": "Marriage, its roles and covenant, and how it pictures the gospel. Not: other family relationships.",
+   "status": "draft",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "kingship",
    "group": "Who God is",
    "search_term": "kingship",
-   "definition": "",
+   "definition": "Christ's rule, and earthly kings in light of God's kingdom. Not: power or leadership in general.",
    "status": "draft",
    "extra_phrases": [
     "jesus as king"
-   ]
+   ],
+   "definition_by": "draft by Claude, 14 Nov 2026"
   },
   {
    "slug": "providence",
    "group": "Who God is",
    "search_term": "gods providence",
-   "definition": "",
-   "status": "pending"
+   "definition": "God's care and rule over events, working things toward his purposes. Not: coincidence or a general call to trust.",
+   "status": "pending",
+   "definition_by": "draft by Claude, 14 Nov 2026"
   }
  ]
 }
