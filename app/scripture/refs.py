@@ -131,6 +131,20 @@ def parse_authored(text):
     return ranges
 
 
+def parse_authored_roles(text):
+    """Like `parse_authored`, with a role for each range: (Range, 'EXPOSITED' or 'SUPPORTING').
+
+    A bracketed reference, as in 'Esther 6:1-12 (3:1-6)', is supporting. Everything else is exposited.
+    """
+    brackets = re.findall(r"\(([^)]*)\)", text)
+    main = parse_authored(re.sub(r"\s*\([^)]*\)", "", text))
+    out = [(r, "EXPOSITED") for r in main]
+    for inner in brackets:
+        for r in parse_authored(f"{BOOKS[book_of(main[-1].start) - 1]} {inner}"):
+            out.append((r, "SUPPORTING"))
+    return out
+
+
 def _parse_item(item, book, chapter, source):
     try:
         colons = item.count(":")

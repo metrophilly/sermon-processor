@@ -94,3 +94,9 @@ def test_classification_of_how_audio_and_record_compare():
 ])
 def test_spoken_ranges_that_cross_chapters_without_the_word_chapter(text, expected):
     assert expected in [refs.format_range(f["range"]) for f in spoken.find_spoken(para(text))]
+
+
+def test_a_bracketed_reference_is_supporting_and_the_rest_is_exposited():
+    got = [(refs.format_range(r), role) for r, role in refs.parse_authored_roles("Esther 6:1-12 (3:1-6)")]
+    assert got == [("Esther 6:1-12", "EXPOSITED"), ("Esther 3:1-6", "SUPPORTING")]
+    assert {role for _, role in refs.parse_authored_roles("John 6:1-15, 25-35")} == {"EXPOSITED"}

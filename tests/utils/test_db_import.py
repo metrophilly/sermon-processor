@@ -46,7 +46,24 @@ def _plan(sha="s1"):
 
 def test_same_audio_updates_in_place_and_new_audio_makes_a_new_version():
     sql, counts = db_import.build_sql(_plan("s1"), {"k.mp3": ("t1", 1, "s1")})
-    assert counts == {"new": 0, "updated": 1, "retired": 0, "paragraphs": 1} and "COPY sermon_transcript" not in sql
+    assert counts == {"new": 0, "updated": 1, "retired": 0, "paragraphs": 1, "passages": 0} and "COPY sermon_transcript" not in sql
     sql, counts = db_import.build_sql(_plan("s2"), {"k.mp3": ("t1", 1, "s1")})
-    assert counts == {"new": 1, "updated": 0, "retired": 1, "paragraphs": 1}
+    assert counts == {"new": 1, "updated": 0, "retired": 1, "paragraphs": 1, "passages": 0}
     assert 'SET "isCurrent" = false WHERE id = \'t1\'' in sql and sql.index("isCurrent\" = false") < sql.index("COPY sermon_transcript")
+
+
+def test_authored_passages_become_ranges_with_roles_and_failures_are_listed():
+    sermons = [{"id": "a", "passage": "Esther 6:1-12 (3:1-6)"}, {"id": "b", "passage": "Number 21:1-9"}, {"id": "c", "passage": ""}]
+    rows, unreadable = db_import.authored_passages(sermons)
+    assert [(r["sermonId"], r["position"], r["label"], r["role"], r["source"]) for r in rows] == [
+        ("a", 1, "Esther 6:1-12", "EXPOSITED", "AUTHORED"), ("a", 2, "Esther 3:1-6", "SUPPORTING", "AUTHORED")]
+    assert [u[0] for u in unreadable] == ["b", "c"]
+
+
+def test_passages_replace_only_authored_rows_for_the_sermons_in_the_run():
+    plan = {"sermons": [], "transcripts": [], "passages": [
+        {"sermonId": "a", "position": 1, "startRef": 1, "endRef": 2, "label": "Genesis 1", "role": "EXPOSITED", "source": "AUTHORED"}]}
+    sql, counts = db_import.build_sql(plan, {})
+    assert counts["passages"] == 1
+    assert "DELETE FROM sermon_passage WHERE \"source\" = 'AUTHORED'" in sql and "COPY sermon_passage" in sql
+    assert sql.index("DELETE FROM sermon_passage") < sql.index("COPY sermon_passage")

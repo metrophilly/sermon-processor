@@ -28,6 +28,7 @@ TRANSCRIPT_COLUMNS = [
     "id", "s3Key", "version", "isCurrent", "audioSha256", "durationSeconds",
     "model", "wordCount", "wordsPath", "fixesCommit", "generatedAt",
 ]
+PASSAGE_COLUMNS = ["id", "sermonId", "position", "startRef", "endRef", "label", "role", "source"]
 PARAGRAPH_COLUMNS = [
     "id", "transcriptId", "paragraphId", "position", "startMs", "endMs",
     "textRaw", "textEdited", "edits", "avgConfidence",
@@ -66,6 +67,29 @@ def sermon_row(doc, updated_at):
     }
 
 
+def authored_passages(sermons):
+    """Passage ranges parsed from each sermon's authored passage. Never from a transcript.
+
+    Returns (rows, unreadable) where unreadable lists (sermon id, passage, reason) for a person to fix.
+    """
+    from app.scripture import refs
+
+    rows, unreadable = [], []
+    for sermon in sermons:
+        if not sermon.get("passage"):
+            unreadable.append((sermon["id"], "", "no passage"))
+            continue
+        try:
+            ranges = refs.parse_authored_roles(sermon["passage"])
+        except refs.RefError as error:
+            unreadable.append((sermon["id"], sermon["passage"], str(error)))
+            continue
+        for position, (r, role) in enumerate(ranges, 1):
+            rows.append({"sermonId": sermon["id"], "position": position, "startRef": r.start, "endRef": r.end,
+                         "label": refs.format_range(r), "role": role, "source": "AUTHORED"})
+    return rows, unreadable
+
+
 def transcript_paragraphs(transcript, edited):
     """Paragraph rows for one transcript. `edited` is the edited layer or None."""
     edited_text = {p["id"]: p["text"] for p in (edited or {}).get("paragraphs", [])}
@@ -98,6 +122,7 @@ def build_plan(archive_dir, sanity_path, fixes_commit):
         os.path.getmtime(sanity_path), datetime.timezone.utc
     ).isoformat(timespec="seconds")
     sermons = [sermon_row(doc, updated_at) for doc in sanity]
+    passages, unreadable = authored_passages(sermons)
 
     transcripts, problems = [], []
     root = os.path.join(archive_dir, "transcripts")
@@ -161,7 +186,9 @@ def build_plan(archive_dir, sanity_path, fixes_commit):
                 (datetime.date.fromisoformat(s["spokenDate"][:10]) - datetime.date.fromisoformat(t["date"])).days
             ) > 1:
                 report["date_mismatch"].append((t, s))
-    return {"sermons": sermons, "transcripts": transcripts, "report": report}
+    report["passage_ranges"] = len(passages)
+    report["passages_unreadable"] = unreadable
+    return {"sermons": sermons, "passages": passages, "transcripts": transcripts, "report": report}
 
 
 def report_lines(plan):
@@ -173,7 +200,10 @@ def report_lines(plan):
         f"Transcripts with no sermon: {len(r['no_sermon'])}",
         f"Transcripts matching more than one sermon: {len(r['shared'])}",
         f"Date mismatches (more than 1 day): {len(r['date_mismatch'])}",
+        f"Passage ranges: {r['passage_ranges']} ({len(r['passages_unreadable'])} sermons with an unreadable passage)",
     ]
+    for sermon_id, passage, reason in r["passages_unreadable"]:
+        lines.append(f"  passage unreadable: {sermon_id} {passage!r}: {reason}")
     for t in r["no_sermon"]:
         lines.append(f"  no sermon: {t['date']} {t['sermon_id']} ({t['s3Key']})")
     for t, group in r["shared"]:
@@ -220,6 +250,11 @@ def build_sql(plan, existing):
         f'ON CONFLICT ("id") DO UPDATE SET {sets}, "deletedAt" = NULL, "syncedAt" = now();'
     )
 
+    out.append('DELETE FROM sermon_passage WHERE "source" = \'AUTHORED\' AND "sermonId" IN (SELECT id FROM stg_sermon);')
+    passage_rows = [{**p, "id": uuid.uuid4().hex} for p in plan.get("passages", [])]
+    if passage_rows:
+        out.append(_copy("sermon_passage", PASSAGE_COLUMNS, passage_rows))
+
     new_transcripts, paragraphs, retire, update = [], [], [], []
     for t in plan["transcripts"]:
         current = existing.get(t["s3Key"])
@@ -258,7 +293,8 @@ def build_sql(plan, existing):
     )
     out.append("COMMIT;")
     return "\n".join(out) + "\n", {
-        "new": len(new_transcripts), "updated": len(update), "retired": len(retire), "paragraphs": len(paragraphs)
+        "new": len(new_transcripts), "updated": len(update), "retired": len(retire), "paragraphs": len(paragraphs),
+        "passages": len(passage_rows),
     }
 
 
@@ -289,6 +325,7 @@ def run_import(plan, url, print_fn=print):
         raise RuntimeError("Import failed and was rolled back: " + result.stderr.strip()[-500:])
     print_fn(
         f"Imported {len(plan['sermons'])} sermons; {counts['new']} new transcripts, "
-        f"{counts['updated']} updated in place, {counts['retired']} retired; {counts['paragraphs']} paragraphs."
+        f"{counts['updated']} updated in place, {counts['retired']} retired; {counts['paragraphs']} paragraphs; "
+        f"{counts['passages']} passage ranges."
     )
     return counts

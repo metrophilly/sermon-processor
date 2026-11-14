@@ -127,9 +127,11 @@ def build_parser():
         "scripture",
         help="Scripture references: parse a passage, check every authored passage, or audit audio against the record (DT-261)",
     )
-    scripture.add_argument("action", choices=["parse", "authored", "audit"],
-                           help="parse: read one passage string. authored: parse all Sanity passages and list failures. audit: compare each audio's announced passage with the record")
-    scripture.add_argument("text", nargs="*", help="parse: the passage, for example \"Genesis 1:1-2, 26-2:3\"")
+    scripture.add_argument("action", choices=["parse", "authored", "audit", "find"],
+                           help="parse: read one passage string. authored: parse all Sanity passages and list failures. audit: compare each audio's announced passage with the record. find: sermons preached on a passage, exact matches first (needs SERMON_DATABASE_URL)")
+    scripture.add_argument("text", nargs="*", help="parse or find: the passage, for example \"Genesis 1:1-2, 26-2:3\" or \"Romans 8\"")
+    scripture.add_argument("--limit", type=int, default=30, help="find: most sermons to show (default 30)")
+    scripture.add_argument("--supporting", action="store_true", help="find: also include supporting passages")
     scripture.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
 
     transcribe = commands.add_parser(
@@ -540,6 +542,18 @@ def run_scripture(args, print_fn=print):
     """Scripture references. Reads local files only. The audit reports and never changes a record."""
     from app.scripture import audit, refs
 
+    if args.action == "find":
+        from app.scripture import find
+
+        url = os.environ.get("SERMON_DATABASE_URL")
+        if not url:
+            raise CliError("Set SERMON_DATABASE_URL to the database connection string, then run again.")
+        if not args.text:
+            raise CliError('Give a passage, for example: sermon scripture find "Romans 8"')
+        query, rows = find.find(url, " ".join(args.text), limit=args.limit, supporting=args.supporting)
+        for line in find.format_rows(query, rows):
+            print_fn(line)
+        return 0
     archive = os.path.expanduser(args.archive)
     if args.action == "parse":
         if not args.text:
