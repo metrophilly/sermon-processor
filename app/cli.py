@@ -123,6 +123,15 @@ def build_parser():
     themes.add_argument("--threshold", type=int, default=1000, help="demand: monthly searches (lower bound) for a landing page candidate (default 1000)")
     themes.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
 
+    scripture = commands.add_parser(
+        "scripture",
+        help="Scripture references: parse a passage, check every authored passage, or audit audio against the record (DT-261)",
+    )
+    scripture.add_argument("action", choices=["parse", "authored", "audit"],
+                           help="parse: read one passage string. authored: parse all Sanity passages and list failures. audit: compare each audio's announced passage with the record")
+    scripture.add_argument("text", nargs="*", help="parse: the passage, for example \"Genesis 1:1-2, 26-2:3\"")
+    scripture.add_argument("--archive", default=os.path.join(DEFAULT_OUTPUT_DIR, "archive"), help="Archive folder (default: output/archive)")
+
     transcribe = commands.add_parser(
         "transcribe",
         help="Transcribe one audio file to DATE.transcript.json and DATE.vtt (Apple Silicon, mlx-whisper)",
@@ -527,6 +536,44 @@ def run_batch(args, print_fn=print):
     return 130 if done is None else 0
 
 
+def run_scripture(args, print_fn=print):
+    """Scripture references. Reads local files only. The audit reports and never changes a record."""
+    from app.scripture import audit, refs
+
+    archive = os.path.expanduser(args.archive)
+    if args.action == "parse":
+        if not args.text:
+            raise CliError('Give a passage, for example: sermon scripture parse "John 6:1-15, 25-35"')
+        for r in refs.parse_authored(" ".join(args.text)):
+            print_fn(f"{refs.format_range(r)}  ({r.start} to {r.end})")
+        return 0
+    if args.action == "authored":
+        with open(os.path.join(archive, "sanity_sermons.json"), encoding="utf-8") as handle:
+            sermons = json.load(handle)
+        bad = []
+        for sermon in sermons:
+            try:
+                refs.parse_authored(sermon["passage"])
+            except refs.RefError as error:
+                bad.append((sermon["spokenDate"][:10], sermon["title"], str(error)))
+        print_fn(f"{len(sermons) - len(bad)} of {len(sermons)} authored passages parse.")
+        for date, title, error in bad:
+            print_fn(f"  {date} {title}: {error}")
+        return 1 if bad else 0
+    rows = audit.audit(archive)
+    csv_path, md_path = os.path.join(archive, "passage_audit.csv"), os.path.join(archive, "passage_audit.md")
+    audit.write_csv(rows, csv_path)
+    with open(md_path, "w", encoding="utf-8") as handle:
+        handle.write(audit.report_markdown(rows))
+    counts = {}
+    for row in rows:
+        counts[row["result"]] = counts.get(row["result"], 0) + 1
+    for name, number in sorted(counts.items(), key=lambda x: -x[1]):
+        print_fn(f"{number:4}  {name}")
+    print_fn(f"\nWrote {md_path} and {csv_path}. The audit changes nothing.")
+    return 0
+
+
 def run_theme_demand(args, print_fn=print):
     """Search phrases for the draft theme list, and the join with Keyword Planner and Search Console."""
     from app.themes import demand
@@ -742,6 +789,12 @@ def main(argv=None, input_fn=input, print_fn=print):
         try:
             return run_fixes(args, print_fn)
         except (CliError, ValueError, OSError) as error:
+            print_fn(f"\n{error}")
+            return 1
+    if args.command == "scripture":
+        try:
+            return run_scripture(args, print_fn)
+        except (CliError, ValueError, OSError, KeyError) as error:
             print_fn(f"\n{error}")
             return 1
     if args.command == "themes":
